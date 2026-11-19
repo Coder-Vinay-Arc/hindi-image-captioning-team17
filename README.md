@@ -30,6 +30,26 @@ Image captioning mostly English mein hota hai. Hindi ek low-resource language ha
 2. **Advanced:** Transformer decoder (CNN/ViT encoder ke saath)
 3. **Comparison pipeline:** English captioning model → Machine Translation (Hindi)
 
+## Current Status
+
+- [x] Repo created, all members added as collaborators
+- [x] Dataset strategy decided: Hindi Visual Genome (region-crop approach)
+- [x] `preprocess_hvg.py` script ready
+- [ ] Dataset download — in progress
+- [ ] Model training — not started
+- [ ] Report — not started
+
+> Detailed task division for each member is in [`CLAUDE.md`](./CLAUDE.md).
+
+## Task Division
+
+| Member | Branch | Task |
+|---|---|---|
+| Vinay Kumar Gupta | `vinay-data-pipeline` | Dataset download, preprocessing, PyTorch Dataset class |
+| Rahul Kumar Verma | `rahul-baseline-model` | Baseline model: CNN + LSTM + Attention |
+| Vishal Bhardwaj | `vishal-transformer-model` | Advanced model: Transformer decoder |
+| Vivek Kumar | `vivek-translation-eval` | English captioning + translation pipeline, BLEU/CIDEr evaluation |
+
 ## Evaluation
 
 - BLEU / CIDEr scores (teeno approaches ke liye)
