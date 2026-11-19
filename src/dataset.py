@@ -142,12 +142,20 @@ class HVGDataset(Dataset):
         return self.df.iloc[idx]["hindi_caption"]
 
 
-def make_collate(pad_id):
-    def collate(batch):
+class Collate:
+    """Pads captions in a batch. A class (not a closure) so DataLoader workers can pickle it on Windows."""
+
+    def __init__(self, pad_id):
+        self.pad_id = pad_id
+
+    def __call__(self, batch):
         images, caps = zip(*batch)
         lengths = torch.tensor([len(c) for c in caps], dtype=torch.long)
-        return torch.stack(images), pad_sequence(caps, batch_first=True, padding_value=pad_id), lengths
-    return collate
+        return torch.stack(images), pad_sequence(caps, batch_first=True, padding_value=self.pad_id), lengths
+
+
+def make_collate(pad_id):
+    return Collate(pad_id)
 
 
 def get_dataloader(split, vocab, root="data/processed", batch_size=32, shuffle=None,
