@@ -2,7 +2,7 @@
 
 **Deep Learning Project — Team 17 (Section B)**
 
-Hindi Visual Genome aur attention-based deep learning models ka use karke images ke liye seedhe Hindi captions generate karna — English captioning aur translation pipeline se compare karte hue.
+Generating Hindi captions for images directly using Hindi Visual Genome and attention-based deep learning models — compared against an English captioning + translation pipeline.
 
 ## Team Members
 
@@ -15,19 +15,20 @@ Hindi Visual Genome aur attention-based deep learning models ka use karke images
 
 ## Problem Statement
 
-Image captioning mostly English mein hota hai. Hindi ek low-resource language hai is task ke liye. Is project mein hum images ke liye directly Hindi captions generate karte hain, aur compare karte hain ki direct Hindi captioning better hai ya English caption + machine translation pipeline.
+Most image captioning research and models are built for English, while Hindi remains a low-resource language for this task. In this project, we generate Hindi captions for images directly, and compare whether direct Hindi captioning performs better than an English captioning + machine translation pipeline.
 
 ## Dataset
 
 - **Primary:** [Hindi Visual Genome](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-3267) (LINDAT/CLARIN)
 - **Optional:** Flickr8k (translated captions)
+- **Data source (Google Drive):** https://drive.google.com/file/d/1Ts_UObq-tl9n2xjKGivxUe9w_ndGEY_n/view?usp=sharing
 
-> Dataset is repo mein upload nahi hai (size limit ki wajah se). Download karne ke liye `data/README.md` dekhein, ya neeche diye `data/download_data.sh` script chalayein.
+> The dataset is not uploaded to this repo (due to size limits). To download it, see `data/README.md`, or run the `data/download_data.sh` script given below.
 
 ## Approach
 
 1. **Baseline:** CNN encoder (ResNet) + LSTM decoder with attention (Show, Attend and Tell)
-2. **Advanced:** Transformer decoder (CNN/ViT encoder ke saath)
+2. **Advanced:** Transformer decoder (with a CNN/ViT encoder)
 3. **Comparison pipeline:** English captioning model → Machine Translation (Hindi)
 
 ## Current Status
@@ -52,7 +53,7 @@ Image captioning mostly English mein hota hai. Hindi ek low-resource language ha
 
 ## Evaluation
 
-- BLEU / CIDEr scores (teeno approaches ke liye)
+- BLEU / CIDEr scores (for all three approaches)
 - Chhota human evaluation (fluency + correctness, 1–5 scale)
 - Attention map visualizations
 
