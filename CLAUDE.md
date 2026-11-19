@@ -69,6 +69,7 @@ In Hindi Visual Genome, captions describe a **region (bounding box) within an im
 4. `git push origin <branch-name>`, then open a Pull Request on GitHub and merge into `main`.
 5. Keep commit messages clear: `"add resnet encoder"`, `"fix dataset path bug"` -- avoid vague messages like "update" or "fix".
 6. Never commit large files (datasets, model weights `.pth`/`.h5`, bulk images) -- already handled via `.gitignore`.
+7. **No AI attribution.** Commits must NOT carry an AI co-author line (e.g. `Co-Authored-By: Claude ...`), and PR descriptions must NOT include "Generated with Claude Code" or similar footers. All commits, pushes and PRs must appear as the team member's own work. This is also enforced via `.claude/settings.json` (`attribution` set to empty) -- do not remove that setting.
 
 ## Coding Conventions
 
