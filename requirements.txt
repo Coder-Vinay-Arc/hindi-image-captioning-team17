@@ -1,0 +1,8 @@
+torch>=2.0
+torchvision>=0.15
+pillow
+pandas
+numpy
+indic-nlp-library
+nltk
+tqdm

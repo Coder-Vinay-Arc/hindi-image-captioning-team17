@@ -221,3 +221,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project data (large, not committed)
+data/
+hindi-visual-genome-11/
+results/*.pth
+*.pth
+*.h5
