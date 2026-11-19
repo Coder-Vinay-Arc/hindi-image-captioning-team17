@@ -45,8 +45,8 @@ Most image captioning research and models are built for English, while Hindi rem
 ## Dataset
 
 - **Source:** [Hindi Visual Genome 1.1](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-3267) (LINDAT/CLARIN). The release ships the images, so no separate Visual Genome download is needed.
-- **Processed data (Google Drive):** https://drive.google.com/file/d/1Ts_UObq-tl9n2xjKGivxUe9w_ndGEY_n/view?usp=sharing (`hvg-processed.zip`)
-- **Note:** `hvg-processed.zip` contains `train`, `test`, `sample` and `vocab.json`. The `dev` split was uploaded separately (`dev.zip`, ask Vinay for the link if you cannot find it in the Drive folder). Extract both into `data/processed/`.
+- **Processed data (Google Drive folder, everything is here):** https://drive.google.com/drive/folders/1jF_T4IGqQlnZO42QYHk8bQuIgdeUTLwi?usp=sharing
+- **Files in that folder:** `hvg-processed.zip.zip` (contains `train`, `test`, `sample` and `vocab.json`) and `dev.zip` (the `dev` split). Download both and extract **both** into `data/processed/`, so you end up with `data/processed/{train,dev,test,sample}` and `data/processed/vocab.json`. Trained checkpoints and result files are saved in the same folder (`checkpoints/`, `results/`).
 - The data is **not** in git (size). `data/` is in `.gitignore`.
 
 ### Region-crop decision
