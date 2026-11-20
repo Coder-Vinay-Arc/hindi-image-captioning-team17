@@ -17,7 +17,7 @@ Generating Hindi captions for images directly using Hindi Visual Genome and atte
 
 Most image captioning research and models are built for English, while Hindi remains a low-resource language for this task. In this project, we generate Hindi captions for images directly, and compare whether direct Hindi captioning performs better than an English captioning + machine translation pipeline.
 
-## Current Status (updated 19 Nov 2026)
+## Current Status (updated 20 Nov 2026)
 
 - [x] Repo created, all members added as collaborators
 - [x] Dataset strategy decided: Hindi Visual Genome (region-crop approach)
@@ -26,9 +26,10 @@ Most image captioning research and models are built for English, while Hindi rem
 - [x] `src/models/baseline.py` + `src/train.py` — CNN + LSTM + Attention, training loop, checkpoints (merged)
 - [x] `src/evaluate.py` — BLEU-1..4 and CIDEr, usable for all three approaches (merged)
 - [x] Baseline trained on the full training set and scored on the test set — see [Results](#results)
-- [ ] Transformer model (`src/models/transformer.py`) — not started
+- [x] Transformer model (`src/models/transformer.py`) trained and scored on the test set — see [Results](#results)
+- [x] Transformer attention-map figures (`src/attention_maps.py`, `results/transformer_attention_*.png`)
 - [ ] English captioning + translation pipeline (`src/translation_pipeline.py`) — not started
-- [ ] Human evaluation, attention-map figures — not started
+- [ ] Human evaluation, baseline attention-map figures — not started
 - [ ] Report — not started
 
 ## Task Division
@@ -37,7 +38,7 @@ Most image captioning research and models are built for English, while Hindi rem
 |---|---|---|---|
 | Vinay Kumar Gupta | `vinay-data-pipeline`, `vinay-baseline` | Data pipeline, Dataset class, baseline training, `evaluate.py` | Done (merged) |
 | Rahul Kumar Verma | `rahul-baseline-model` | Baseline model: CNN + LSTM + Attention | Baseline already exists in `main` — Rahul can extend/tune it (e.g. `--fine_tune`, more epochs) |
-| Vishal Bhardwaj | `vishal-transformer-model` | Transformer decoder (`src/models/transformer.py`) | To do — see [Adding a new model](#adding-a-new-model) |
+| Vishal Bhardwaj | `vishal-transformer-model` | Transformer decoder (`src/models/transformer.py`) | Done — see [Transformer training setup](#transformer-training-setup) |
 | Vivek Kumar | `vivek-translation-eval` | English captioning + translation pipeline | To do — see [Scoring another approach](#scoring-another-approach-eg-translation-pipeline) |
 
 > Detailed project rules and task division are in [`CLAUDE.md`](./CLAUDE.md).
@@ -81,7 +82,7 @@ python src/dataset.py --root data/processed --split dev      # builds data/proce
 ## Approach
 
 1. **Baseline (done):** ResNet-50 encoder (ImageNet-pretrained, frozen) → 7x7 grid of 2048-d features → LSTM decoder with additive (Bahdanau) soft attention ("Show, Attend and Tell").
-2. **Advanced (to do):** CNN/ViT encoder + Transformer decoder.
+2. **Advanced (done):** the same frozen ResNet-50 grid features → 3-layer Transformer decoder with cross-attention over the 49 image cells.
 3. **Comparison pipeline (to do):** English captioning model → machine translation to Hindi.
 
 ### Baseline training setup
@@ -96,6 +97,21 @@ python src/dataset.py --root data/processed --split dev      # builds data/proce
 | Best checkpoint | epoch 8 (dev loss 3.619); dev loss rises slightly after that (mild overfitting) |
 | Decoding | beam search, beam size 3 |
 
+### Transformer training setup
+| | |
+|---|---|
+| Encoder | same frozen ResNet-50 as the baseline, features projected to 512-d + learned grid-position embeddings |
+| Decoder | 3 pre-norm Transformer layers, 8 heads, d_model 512, feed-forward 1024, dropout 0.3 |
+| Trainable parameters | 14.28 M |
+| Loss | cross-entropy (pad ignored); no attention penalty |
+| Optimiser | Adam, lr 2e-4, gradient clipping 5.0 |
+| Run | 15 epochs, batch size 64, Colab T4 GPU (~2 min / epoch) |
+| Best checkpoint | epoch 8 (dev loss 3.201); dev loss rises after that (train loss keeps falling to 1.93, dev reaches 3.56) |
+| Decoding | beam search, beam size 3 |
+| Ablation | dropout 0.4, 12 epochs: best epoch 8, dev loss 3.224 |
+
+The final Transformer was chosen by dev loss, not by test score. The Transformer's dev loss is plain cross-entropy, while the baseline's also includes the attention penalty, so the two dev losses are not directly comparable.
+
 ## Results
 
 Test set (1,586 region crops), scores x100:
@@ -103,8 +119,11 @@ Test set (1,586 region crops), scores x100:
 | Approach | BLEU-1 | BLEU-2 | BLEU-3 | BLEU-4 | CIDEr |
 |---|---|---|---|---|---|
 | CNN + LSTM + Attention (baseline) | 22.82 | 12.00 | 7.00 | 4.31 | 68.22 |
-| Transformer | — | — | — | — | — |
+| ResNet-50 + Transformer decoder | 21.42 | 10.94 | 5.99 | 3.18 | 59.13 |
+| ResNet-50 + Transformer decoder, dropout 0.4 (ablation) | 22.20 | 11.55 | 6.23 | 3.03 | 60.88 |
 | English captioning + translation | — | — | — | — | — |
+
+The Transformer is below the baseline on every metric (CIDEr 59.13 vs 68.22). The dropout 0.4 ablation scored slightly higher on test than the dropout 0.3 model, but its dev loss was slightly worse (3.224 vs 3.201) and each setting was run once, so the final Transformer is the dropout 0.3 model chosen by dev loss.
 
 Notes: captions are short region descriptions (about 4-5 words), so BLEU-3/4 are naturally low. Many predictions are generic ("एक प्लेट पर एक सैंडविच"), and rare words become `<unk>` because the vocabulary only keeps words that appear at least twice in train. Scores and predictions are in `results/` (`<name>_test_scores.json`, `<name>_test_preds.csv`).
 
@@ -117,9 +136,12 @@ Notes: captions are short region descriptions (about 4-5 words), so BLEU-3/4 are
 │   ├── preprocess_hvg.py   # crops regions, writes captions.csv
 │   ├── dataset.py          # tokenizer, Vocab, HVGDataset, get_dataloader
 │   ├── models/
-│   │   └── baseline.py     # CNN + LSTM + Attention (transformer.py to come)
+│   │   ├── baseline.py     # CNN + LSTM + Attention
+│   │   └── transformer.py  # ResNet-50 + Transformer decoder
 │   ├── train.py            # training loop, save/load checkpoints
-│   └── evaluate.py         # BLEU, CIDEr (reusable for every approach)
+│   ├── evaluate.py         # BLEU, CIDEr (reusable for every approach)
+│   ├── attention_maps.py   # attention-map figures for random test images
+│   └── compare_results.py  # Markdown score table from results/*_scores.json
 ├── checkpoints/       # *.pth (NOT committed)
 ├── results/           # score tables, predictions, attention maps
 ├── requirements.txt
@@ -144,6 +166,12 @@ python src/train.py --model baseline --epochs 10 --batch_size 64
 
 # 5. Evaluate the best checkpoint on the test set
 python src/evaluate.py --model baseline --split test --ckpt checkpoints/baseline_best.pth --beam 3
+
+# 6. Transformer: train, evaluate, attention figures, score table
+python src/train.py --model transformer --epochs 15 --batch_size 64 --lr 2e-4 --name transformer   # add --dropout 0.4 or --fine_tune to try variants
+python src/evaluate.py --model transformer --split test --ckpt checkpoints/transformer_best.pth --beam 3
+python src/attention_maps.py --model transformer --ckpt checkpoints/transformer_best.pth --n 6 --beam 3   # needs a Devanagari font, see the script docstring
+python src/compare_results.py --names baseline transformer
 ```
 
 ### Loading the data in your own code

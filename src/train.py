@@ -109,6 +109,7 @@ def main():
     ap.add_argument("--batch_size", type=int, default=32)
     ap.add_argument("--lr", type=float, default=4e-4)
     ap.add_argument("--fine_tune", action="store_true", help="unfreeze the last ResNet block")
+    ap.add_argument("--dropout", type=float, default=None, help="override the model's default dropout (e.g. 0.4)")
     ap.add_argument("--alpha_c", type=float, default=1.0, help="attention regularisation weight")
     ap.add_argument("--num_workers", type=int, default=2)
     ap.add_argument("--ckpt_dir", default="checkpoints")
@@ -136,7 +137,8 @@ def main():
     val_loader = get_dataloader(args.val_split, vocab, args.data_root, args.batch_size, shuffle=False,
                                 num_workers=args.num_workers)
 
-    model = build_model(args.model, len(vocab), fine_tune=args.fine_tune).to(device)
+    extra = {} if args.dropout is None else {"dropout": args.dropout}
+    model = build_model(args.model, len(vocab), fine_tune=args.fine_tune, **extra).to(device)
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.Adam(params, lr=args.lr)
     criterion = nn.CrossEntropyLoss(ignore_index=vocab.pad_id)
