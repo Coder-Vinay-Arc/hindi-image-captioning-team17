@@ -7,3 +7,6 @@ indic-nlp-library
 nltk
 tqdm
 matplotlib
+transformers>=4.40
+deep-translator>=1.11
+
