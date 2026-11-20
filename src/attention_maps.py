@@ -61,12 +61,12 @@ def draw_one(path, image, words, att, reference, font, out_file):
         a = (a - a.min()) / (a.max() - a.min() + 1e-8)
         ax.imshow(image)
         ax.imshow(a.numpy(), extent=(0, W, H, 0), cmap="jet", alpha=0.55, interpolation="bilinear")
-        ax.set_title(word, fontsize=13, fontname=font)
+        ax.set_title(word, fontsize=13)
     for ax in axes:
         ax.axis("off")
     fig.tight_layout(rect=(0, 0.12, 1, 1))
     fig.text(0.5, 0.02, f"prediction: {' '.join(words)}     reference: {reference}", ha="center", va="bottom",
-             fontsize=11, fontname=font)
+             fontsize=11)
     fig.savefig(out_file, dpi=150)
     plt.close(fig)
 
@@ -88,6 +88,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, vocab = load_checkpoint(args.ckpt, device)
     font = pick_hindi_font()
+    plt.rcParams["font.family"] = [font, "DejaVu Sans"]  # Hindi font first, DejaVu for the English labels
     prefix = args.name or f"{args.model}_attention"
     os.makedirs(args.out_dir, exist_ok=True)
 
