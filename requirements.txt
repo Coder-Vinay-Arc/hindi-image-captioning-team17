@@ -6,3 +6,4 @@ numpy
 indic-nlp-library
 nltk
 tqdm
+matplotlib
