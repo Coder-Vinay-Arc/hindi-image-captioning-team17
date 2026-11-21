@@ -251,6 +251,20 @@ python src/translation_pipeline.py --split test --gold_english --out results/tra
 python src/evaluate.py --model translation_gold_en --split test --pred_csv results/translation_gold_en_test_preds.csv
 ```
 
+### Try the model on your own image
+Download `baseline_best.pth` (and optionally `transformer_best.pth`) from the shared Drive folder (`checkpoints/`) into the local `checkpoints/` folder, then:
+```bash
+# one image, one model -> prints the Hindi caption
+python src/caption_image.py --image my_photo.jpg --ckpt checkpoints/baseline_best.pth
+
+# compare baseline and Transformer on the same image, and save a picture with the caption
+python src/caption_image.py --image my_photo.jpg --ckpt checkpoints/baseline_best.pth checkpoints/transformer_best.pth --save_dir results/demo
+
+# caption only a region of a big photo: --box X Y WIDTH HEIGHT (pixels)
+python src/caption_image.py --image street.jpg --box 120 80 200 160 --ckpt checkpoints/baseline_best.pth
+```
+The models were trained on small region crops, so they work best on a photo that shows one main object or a small scene; for a busy photo use `--box` to pick the part to caption.
+
 ### Loading the data in your own code
 ```python
 import sys; sys.path.insert(0, "src")
