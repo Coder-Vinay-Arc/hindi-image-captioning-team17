@@ -9,18 +9,21 @@ This file defines the project context and rules. Each team member can show this 
 **Goal:** Generate Hindi captions directly for images, and compare whether this is better than an "English caption + Machine Translation" pipeline.
 **Deadline:** 22 Nov 2026, 11:59 PM IST
 
-## Current Status (as of now)
+## Current Status (as of 21 Nov 2026)
 
 - [x] GitHub repo created, all collaborators added
-- [x] Initial draft of README.md done
 - [x] Dataset decision finalized: Hindi Visual Genome (HVG), region-crop approach (each bounding box is treated as an independent image-caption pair)
-- [x] `preprocess_hvg.py` script written (crops regions, generates captions.csv)
-- [ ] Dataset not downloaded yet
-- [ ] No model trained yet
-- [ ] No code pushed to `src/` yet
-- [ ] Report not started
+- [x] Dataset downloaded and preprocessed: train 28,705 / dev 993 / test 1,586 crops (+ 500-row `sample`), shared vocab `data/processed/vocab.json` (3,615 tokens)
+- [x] `src/dataset.py`, `src/train.py`, `src/evaluate.py` merged to `main`
+- [x] Baseline (CNN + LSTM + Attention) trained and scored: test CIDEr 68.22
+- [x] Transformer trained and scored (Vishal): test CIDEr 59.13
+- [x] English captioning + translation pipeline done and scored (Vivek): test CIDEr 33.89; its 50-sample human evaluation is done
+- [x] Main finding: direct Hindi captioning beats English captioning + translation
+- [ ] Baseline fine-tuning / optimisation experiments and baseline attention-map figures -- Rahul (open)
+- [ ] Human evaluation of the baseline and the Transformer (same 50 samples as the translation evaluation) -- open
+- [ ] Report -- open
 
-**Important:** Only planning has happened so far. No actual training/coding work is done yet -- each member needs to START their assigned part.
+**Important:** the up-to-date, detailed status, results table, progress log and open tasks are in `README.md` -- read it before starting any work. Do not rewrite `src/train.py`, `src/models/baseline.py` or `src/evaluate.py` from scratch: the reported results and the other members' code depend on them (extend them or add new files instead).
 
 ## Dataset Decision (important context)
 
@@ -37,14 +40,17 @@ In Hindi Visual Genome, captions describe a **region (bounding box) within an im
 ├── notebooks/            # Colab/Jupyter exploration notebooks (person-specific, prefix with name)
 ├── src/
 │   ├── preprocess_hvg.py # Dataset preprocessing (DONE)
-│   ├── dataset.py        # PyTorch Dataset/DataLoader class (TODO)
+│   ├── dataset.py        # Tokenizer, Vocab, PyTorch Dataset/DataLoader (DONE)
 │   ├── models/
-│   │   ├── baseline.py   # CNN + LSTM + Attention (TODO)
-│   │   └── transformer.py # Transformer decoder version (TODO)
-│   ├── translation_pipeline.py  # English captioning + MT pipeline (TODO)
-│   ├── train.py          # Training loop (TODO)
-│   └── evaluate.py       # BLEU / CIDEr scoring (TODO)
-├── results/              # Score tables, attention map images, sample outputs
+│   │   ├── baseline.py   # CNN + LSTM + Attention (DONE)
+│   │   └── transformer.py # Transformer decoder version (DONE)
+│   ├── translation_pipeline.py  # English captioning + MT pipeline (DONE)
+│   ├── train.py          # Training loop, checkpoint save/load (DONE)
+│   ├── evaluate.py       # BLEU / CIDEr scoring, used by all approaches (DONE)
+│   ├── attention_maps.py # Attention-map figures (DONE; baseline figures still to generate)
+│   └── compare_results.py # Markdown score table from results/*_scores.json (DONE)
+├── checkpoints/          # *.pth model weights (NOT committed -- kept on the shared Drive)
+├── results/              # Score tables, predictions, human-eval sheets, attention map images
 ├── requirements.txt
 ├── README.md
 └── CLAUDE.md             # (this file)
@@ -89,21 +95,28 @@ In Hindi Visual Genome, captions describe a **region (bounding box) within an im
 ## Commands Reference
 
 ```bash
-# Preprocess one split
-python src/preprocess_hvg.py --annotations data/raw/train.txt --images_dir data/raw/images --out_dir data/processed/train
+# Preprocess one split (raw files come from the HVG 1.1 zip, extracted into data/raw/)
+python src/preprocess_hvg.py --annotations data/raw/hindi-visual-genome-train.txt --images_dir data/raw/hindi-visual-genome-train.images --out_dir data/processed/train
 
-# Train baseline (once dataset.py + baseline.py are ready)
-python src/train.py --model baseline --epochs 10
+# Train the baseline (use a GPU, e.g. Colab T4); add --fine_tune to unfreeze the last ResNet block
+python src/train.py --model baseline --epochs 10 --batch_size 64
 
-# Evaluate
-python src/evaluate.py --model baseline --split test
+# Evaluate a trained checkpoint on the test split (BLEU-1..4, CIDEr)
+python src/evaluate.py --model baseline --split test --ckpt checkpoints/baseline_best.pth --beam 3
+
+# Score predictions from another approach (CSV with file_name, prediction)
+python src/evaluate.py --model translation --split test --pred_csv results/translation_test_preds.csv
+
+# Attention-map figures
+python src/attention_maps.py --model baseline --ckpt checkpoints/baseline_best.pth --n 6 --beam 3
 ```
+More commands (transformer, translation pipeline, gold-English upper bound) are in `README.md`, section "How to Run".
 
 ## Deadline Checkpoints
 
-- **Day 1-2 (now):** Vinay completes the data pipeline; Rahul/Vishal/Vivek start writing their model/pipeline code (testing on small dummy data in the meantime)
-- **Day 3:** All models start training on real data, results begin to come in
-- **Day 4:** Human evaluation, results table, write the report, final merge to main, submit via Google Form
+- **Day 1-2 (19-20 Nov, done):** data pipeline, baseline, transformer and translation code written
+- **Day 3 (21 Nov, now):** all three approaches trained/run and scored; baseline fine-tuning/optimisation (Rahul), human evaluation of all three approaches, start the report
+- **Day 4 (22 Nov):** finish the report, results table, final merge to main, submit via Google Form before 11:59 PM IST
 
 ## Report
 
