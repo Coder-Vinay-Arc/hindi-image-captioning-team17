@@ -7,3 +7,8 @@ indic-nlp-library
 nltk
 tqdm
 matplotlib
+transformers>=4.40
+sentencepiece
+sacremoses
+deep-translator>=1.11
+

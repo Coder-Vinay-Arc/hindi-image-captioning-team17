@@ -17,7 +17,7 @@ Generating Hindi captions for images directly using Hindi Visual Genome and atte
 
 Most image captioning research and models are built for English, while Hindi remains a low-resource language for this task. In this project, we generate Hindi captions for images directly, and compare whether direct Hindi captioning performs better than an English captioning + machine translation pipeline.
 
-## Current Status (updated 20 Nov 2026)
+## Current Status (updated 21 Nov 2026)
 
 - [x] Repo created, all members added as collaborators
 - [x] Dataset strategy decided: Hindi Visual Genome (region-crop approach)
@@ -28,8 +28,9 @@ Most image captioning research and models are built for English, while Hindi rem
 - [x] Baseline trained on the full training set and scored on the test set — see [Results](#results)
 - [x] Transformer model (`src/models/transformer.py`) trained and scored on the test set — see [Results](#results)
 - [x] Transformer attention-map figures (`src/attention_maps.py`, `results/transformer_attention_*.png`)
-- [ ] English captioning + translation pipeline (`src/translation_pipeline.py`) — not started
-- [ ] Human evaluation, baseline attention-map figures — not started
+- [x] English captioning + translation pipeline (`src/translation_pipeline.py`) — done (BLIP + Opus-MT)
+- [x] Translation human evaluation — 50 test samples scored for fluency + correctness (`results/human_eval_translation.csv`)
+- [ ] Baseline attention-map figures — not started
 - [ ] Report — not started
 
 ## Task Division
@@ -39,7 +40,7 @@ Most image captioning research and models are built for English, while Hindi rem
 | Vinay Kumar Gupta | `vinay-data-pipeline`, `vinay-baseline` | Data pipeline, Dataset class, baseline training, `evaluate.py` | Done (merged) |
 | Rahul Kumar Verma | `rahul-baseline-model` | Baseline model: CNN + LSTM + Attention | Baseline already exists in `main` — Rahul can extend/tune it (e.g. `--fine_tune`, more epochs) |
 | Vishal Bhardwaj | `vishal-transformer-model` | Transformer decoder (`src/models/transformer.py`) | Done — see [Transformer training setup](#transformer-training-setup) |
-| Vivek Kumar | `vivek-translation-eval` | English captioning + translation pipeline | To do — see [Scoring another approach](#scoring-another-approach-eg-translation-pipeline) |
+| Vivek Kumar | `vivek-translation-eval` | English captioning + translation pipeline | Done — see [Results](#results) |
 
 > Detailed project rules and task division are in [`CLAUDE.md`](./CLAUDE.md).
 
@@ -83,7 +84,7 @@ python src/dataset.py --root data/processed --split dev      # builds data/proce
 
 1. **Baseline (done):** ResNet-50 encoder (ImageNet-pretrained, frozen) → 7x7 grid of 2048-d features → LSTM decoder with additive (Bahdanau) soft attention ("Show, Attend and Tell").
 2. **Advanced (done):** the same frozen ResNet-50 grid features → 3-layer Transformer decoder with cross-attention over the 49 image cells.
-3. **Comparison pipeline (to do):** English captioning model → machine translation to Hindi.
+3. **Comparison pipeline (done):** BLIP (`Salesforce/blip-image-captioning-base`) English captioner → Helsinki-NLP Opus-MT (`Helsinki-NLP/opus-mt-en-hi`) English→Hindi translation. Applying the same MT model to the dataset's gold English captions gives the translation upper bound.
 
 ### Baseline training setup
 | | |
@@ -121,11 +122,16 @@ Test set (1,586 region crops), scores x100:
 | CNN + LSTM + Attention (baseline) | 22.82 | 12.00 | 7.00 | 4.31 | 68.22 |
 | ResNet-50 + Transformer decoder | 21.42 | 10.94 | 5.99 | 3.18 | 59.13 |
 | ResNet-50 + Transformer decoder, dropout 0.4 (ablation) | 22.20 | 11.55 | 6.23 | 3.03 | 60.88 |
-| English captioning + translation | — | — | — | — | — |
+| English captioning + translation (BLIP + Opus-MT) | 15.60 | 6.52 | 2.96 | 1.48 | 33.89 |
+| Oracle: gold English + translation (upper bound) | 53.55 | 40.00 | 30.17 | 22.10 | 242.34 |
 
 The Transformer is below the baseline on every metric (CIDEr 59.13 vs 68.22). The dropout 0.4 ablation scored slightly higher on test than the dropout 0.3 model, but its dev loss was slightly worse (3.224 vs 3.201) and each setting was run once, so the final Transformer is the dropout 0.3 model chosen by dev loss.
 
 Notes: captions are short region descriptions (about 4-5 words), so BLEU-3/4 are naturally low. Many predictions are generic ("एक प्लेट पर एक सैंडविच"), and rare words become `<unk>` because the vocabulary only keeps words that appear at least twice in train. Scores and predictions are in `results/` (`<name>_test_scores.json`, `<name>_test_preds.csv`).
+
+The translation pipeline is much weaker than direct Hindi captioning because the English captioner describes the whole crop and loses Hindi-specific detail; translating the dataset's gold English captions with the same MT model reaches CIDEr 242.34, so the captioning stage — not the translation stage — is the main bottleneck. The gold-English row is an upper bound, not a captioning result: HVG's Hindi references are themselves translations of those English captions.
+
+A 50-sample human evaluation of the translation pipeline gives **fluency 3.46/5** and **correctness 3.14/5** (1–5 scale; per-sample ratings in `results/human_eval_translation.csv`).
 
 ## Repository Structure
 
@@ -141,6 +147,7 @@ Notes: captions are short region descriptions (about 4-5 words), so BLEU-3/4 are
 │   ├── train.py            # training loop, save/load checkpoints
 │   ├── evaluate.py         # BLEU, CIDEr (reusable for every approach)
 │   ├── attention_maps.py   # attention-map figures for random test images
+│   ├── translation_pipeline.py  # BLIP English caption + Opus-MT Hindi translation
 │   └── compare_results.py  # Markdown score table from results/*_scores.json
 ├── checkpoints/       # *.pth (NOT committed)
 ├── results/           # score tables, predictions, attention maps
@@ -172,6 +179,14 @@ python src/train.py --model transformer --epochs 15 --batch_size 64 --lr 2e-4 --
 python src/evaluate.py --model transformer --split test --ckpt checkpoints/transformer_best.pth --beam 3
 python src/attention_maps.py --model transformer --ckpt checkpoints/transformer_best.pth --n 6 --beam 3   # needs a Devanagari font, see the script docstring
 python src/compare_results.py --names baseline transformer
+
+# 7. English captioning + translation pipeline (BLIP + Opus-MT)
+python src/translation_pipeline.py --split test
+python src/evaluate.py --model translation --split test --pred_csv results/translation_test_preds.csv
+
+# 8. Translation upper bound: translate the dataset's gold English captions
+python src/translation_pipeline.py --split test --gold_english --out results/translation_gold_en_test_preds.csv
+python src/evaluate.py --model translation_gold_en --split test --pred_csv results/translation_gold_en_test_preds.csv
 ```
 
 ### Loading the data in your own code
