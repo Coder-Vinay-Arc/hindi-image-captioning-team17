@@ -1,0 +1,12 @@
+{
+ "model": "translation",
+ "split": "test",
+ "n": 1586,
+ "scores": {
+  "BLEU-1": 15.6,
+  "BLEU-2": 6.52,
+  "BLEU-3": 2.96,
+  "BLEU-4": 1.48,
+  "CIDEr": 33.89
+ }
+}
