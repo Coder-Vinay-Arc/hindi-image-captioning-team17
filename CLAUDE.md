@@ -69,12 +69,19 @@ In Hindi Visual Genome, captions describe a **region (bounding box) within an im
 4. `git push origin <branch-name>`, then open a Pull Request on GitHub and merge into `main`.
 5. Keep commit messages clear: `"add resnet encoder"`, `"fix dataset path bug"` -- avoid vague messages like "update" or "fix".
 6. Never commit large files (datasets, model weights `.pth`/`.h5`, bulk images) -- already handled via `.gitignore`.
-7. **No AI attribution.** Commits must NOT carry an AI co-author line (e.g. `Co-Authored-By: Claude ...`), and PR descriptions must NOT include "Generated with Claude Code" or similar footers. All commits, pushes and PRs must appear as the team member's own work. This is also enforced via `.claude/settings.json` (`attribution` set to empty) -- do not remove that setting.
+7. **No AI / LLM attribution, for anyone.** This applies to every team member and to every AI tool (Claude, ChatGPT, Copilot, Gemini, Cursor, etc.). A commit or push must NOT carry any AI co-author line (e.g. `Co-Authored-By: Claude ...`, `Co-Authored-By: ChatGPT ...`), and commit messages, PR titles and PR descriptions must NOT include "Generated with Claude Code", "written by ChatGPT" or any similar footer or mention of an AI tool. All commits, pushes and PRs must appear as the team member's own work. Before pushing, check `git log -1` to make sure no such line is present; if it is, remove it (`git commit --amend`) before you push. This is also enforced for Claude Code via `.claude/settings.json` (`attribution` set to empty) -- do not remove that setting.
 
 ## Coding Conventions
 
 - Python 3.10+, use PyTorch.
 - Every script should have a docstring at the top explaining what it does and how to run it (see `preprocess_hvg.py` for an example).
+- **Write detailed comments in all code you add or change** (this applies to code written by hand and to code produced by any AI tool -- add the comments before you commit). The goal is that a teammate can read the file later and easily understand what is happening and why. Concretely:
+  - give every function and class a docstring: what it does, its arguments, what it returns;
+  - put a short comment above each logical block of a function explaining what the block does and, when it is not obvious, why;
+  - for PyTorch code, comment tensor shapes (e.g. `# (B, 49, 2048)`) and the meaning of each dimension;
+  - explain non-obvious choices and magic numbers (why this learning rate, why this size, why this filter);
+  - comment workarounds and edge cases (e.g. why a row is skipped, why a class is used instead of a closure);
+  - do not leave stale comments -- if you change the code, update its comment.
 - Model classes go in `src/models/`, training/eval logic goes in `src/train.py` and `src/evaluate.py` -- don't mix model definitions with the training loop.
 - Whatever model you build, also write a way to save/load checkpoints (so another member can load your trained model and evaluate it).
 - For Hindi text tokenization, use `indic-nlp-library` or simple whitespace + normalization -- whatever you use, add it to `requirements.txt`.

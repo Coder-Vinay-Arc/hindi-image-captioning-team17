@@ -30,19 +30,81 @@ Most image captioning research and models are built for English, while Hindi rem
 - [x] Transformer attention-map figures (`src/attention_maps.py`, `results/transformer_attention_*.png`)
 - [x] English captioning + translation pipeline (`src/translation_pipeline.py`) — done (BLIP + Opus-MT)
 - [x] Translation human evaluation — 50 test samples scored for fluency + correctness (`results/human_eval_translation.csv`)
-- [ ] Baseline attention-map figures — not started
-- [ ] Report — not started
+- [x] Main research question answered: **direct Hindi captioning beats English captioning + translation** (CIDEr 68.22 vs 33.89) — see [Results](#results)
+- [ ] Baseline fine-tuning / optimisation experiments — **Rahul** (see [Open tasks](#open-tasks))
+- [ ] Baseline attention-map figures — **Rahul** (see [Open tasks](#open-tasks))
+- [ ] Human evaluation of the baseline and the Transformer (same 50 samples as the translation evaluation) — open, to be split in the team
+- [ ] Report — open, to be split in the team
 
 ## Task Division
 
 | Member | Branch | Task | Status |
 |---|---|---|---|
-| Vinay Kumar Gupta | `vinay-data-pipeline`, `vinay-baseline` | Data pipeline, Dataset class, baseline training, `evaluate.py` | Done (merged) |
-| Rahul Kumar Verma | `rahul-baseline-model` | Baseline model: CNN + LSTM + Attention | Baseline already exists in `main` — Rahul can extend/tune it (e.g. `--fine_tune`, more epochs) |
-| Vishal Bhardwaj | `vishal-transformer-model` | Transformer decoder (`src/models/transformer.py`) | Done — see [Transformer training setup](#transformer-training-setup) |
-| Vivek Kumar | `vivek-translation-eval` | English captioning + translation pipeline | Done — see [Results](#results) |
+| Vinay Kumar Gupta | `vinay-data-pipeline`, `vinay-baseline` | Data pipeline, Dataset class, baseline model + training, `evaluate.py` | Done (merged) |
+| Rahul Kumar Verma | `rahul-baseline-model` | Baseline improvement: fine-tuning and other optimisation, baseline attention maps | **Not done / open** — nothing from this task is in `main` yet, see [Open tasks](#open-tasks) |
+| Vishal Bhardwaj | `vishal-transformer-model` | Transformer decoder (`src/models/transformer.py`), attention figures, comparison script | Done (merged) — see [Transformer training setup](#transformer-training-setup) |
+| Vivek Kumar | `vivek-translation-eval` | English captioning + translation pipeline, its human evaluation | Done (merged) — see [Results](#results) |
 
 > Detailed project rules and task division are in [`CLAUDE.md`](./CLAUDE.md).
+
+## Progress Log (what has been done so far)
+
+**Data pipeline (Vinay, 19 Nov)**
+- Downloaded Hindi Visual Genome 1.1 from LINDAT (one 4.33 GB zip with the annotation files **and** the images).
+- `src/preprocess_hvg.py` crops every bounding box, resizes it to 224x224 and writes `captions.csv` (`file_name, hindi_caption, english_caption`). It skips regions smaller than 8 px, rows without a Hindi caption, rows whose image is missing, and a few rows with a malformed (non-numeric) bounding box. Result: train 28,705 / dev 993 / test 1,586 crops, plus a 500-row `sample` split for quick tests.
+- `src/dataset.py`: Hindi tokenizer (strips punctuation and the danda `।`, removes zero-width joiners, whitespace split), `Vocab` (3,615 tokens from train only, `min_freq=2`, saved to `vocab.json`), `HVGDataset` (ImageNet-normalised 224x224 images, captions truncated at 40 tokens), a padding `Collate` class (a class rather than a closure so DataLoader workers also work on Windows) and `get_dataloader`.
+- Processed data and `vocab.json` were uploaded to the shared Drive folder so everybody trains on identical data.
+
+**Baseline: CNN + LSTM + Attention (Vinay, 19 Nov)**
+- `src/models/baseline.py`: frozen ResNet-50 → 49 region features → LSTM decoder with additive attention and a gated context vector; greedy and beam-search decoding that also return the attention weights.
+- `src/train.py`: teacher forcing, cross-entropy plus the doubly-stochastic attention penalty, dev loss every epoch, `*_best.pth` / `*_last.pth` checkpoints, `--resume`, `load_checkpoint()` so any model can be re-loaded by other scripts.
+- Trained on a Colab T4 for 10 epochs (about 2.5 min per epoch). Dev loss fell from 4.44 to 3.62 (best at epoch 8), then rose slightly (mild overfitting), so the epoch-8 checkpoint is the one used. Test: BLEU-1 22.82, BLEU-4 4.31, CIDEr 68.22.
+
+**Evaluation code (Vinay, 19 Nov)**
+- `src/evaluate.py` is the single scoring function for all approaches: BLEU-1..4 (NLTK corpus BLEU, smoothing method 1) and CIDEr-D (own pure-Python implementation, no Java needed), all x100. It works on a trained checkpoint (`--ckpt`) or on a predictions CSV from another approach (`--pred_csv`). Sanity-checked: identical captions give BLEU-1 = 100, shuffled captions give near 0.
+
+**Transformer (Vishal, 20 Nov)**
+- `src/models/transformer.py`: same frozen ResNet-50 features, 3-layer pre-norm Transformer decoder with cross-attention over the 49 cells; `--dropout` flag added to `train.py`; trained 15 epochs (best at epoch 8, dev loss 3.201). A dropout-0.4 ablation was also run.
+- `src/attention_maps.py` (attention figures with correctly shaped Devanagari via Raqm) and `src/compare_results.py` (Markdown score table). Test: BLEU-1 21.42, BLEU-4 3.18, CIDEr 59.13 — below the baseline.
+
+**English captioning + translation (Vivek, 21 Nov)**
+- `src/translation_pipeline.py`: BLIP English caption → Opus-MT English→Hindi. Also run on the dataset's **gold** English captions to get an upper bound for the translation step.
+- Test: CIDEr 33.89 for the full pipeline vs 242.34 for gold English + translation, so the English captioning stage is the bottleneck, not the translation stage.
+- Human evaluation of 50 test samples: fluency 3.46/5, correctness 3.14/5.
+
+**Housekeeping**
+- README and `CLAUDE.md` set up with the project rules (own branch + PR, no data or weights in git, no AI attribution in commits/PRs, detailed code comments).
+- Incident to remember: a merged PR was once reverted with GitHub's "Revert" button, which removed the baseline from `main`; it was restored through a new PR. Do not use "Revert" on merged PRs.
+
+**Known limitations (for the report's discussion)**
+- Captions are short region descriptions (4-5 words), so BLEU-3/4 are low for every model; predictions are often generic.
+- Rare words become `<unk>` (vocabulary keeps only words seen at least twice in train).
+- Each configuration was trained once, so small differences between models (e.g. the dropout ablation) are not statistically meaningful.
+- The Transformer's dev loss is plain cross-entropy while the baseline's includes the attention penalty, so the two dev losses cannot be compared directly.
+
+## Open Tasks
+
+### Rahul — baseline improvement (not done yet)
+`rahul-baseline-model` currently has **no merged work**. Please do these on top of the current `main` (use `main`'s `src/train.py`, `src/models/baseline.py` and `src/evaluate.py` — they are what the reported baseline numbers and the Transformer depend on; do not replace them). Start from a fresh branch off the latest `main` and open a PR when finished.
+1. **Fine-tune the baseline's ResNet-50 last block** (`layer4`):
+   ```bash
+   python src/train.py --model baseline --epochs 10 --batch_size 64 --fine_tune --lr 1e-4 --name baseline_ft
+   python src/evaluate.py --model baseline_ft --split test --ckpt checkpoints/baseline_ft_best.pth --beam 3
+   ```
+   Note: `train.py` currently uses a single learning rate for all trainable parameters, so use a smaller `--lr` when `--fine_tune` is on (or add a separate, smaller learning rate for the encoder).
+2. **Other optimisation experiments** on the baseline — pick any that fit the time, one run each: `--dropout`, `--alpha_c`, `--lr`, number of epochs, beam size at evaluation (`--beam 1/3/5`). Choose the final setting by **dev loss**, not by test score.
+3. **Baseline attention-map figures** (`results/baseline_attention_*.png`):
+   ```bash
+   python src/attention_maps.py --model baseline --ckpt checkpoints/baseline_best.pth --n 6 --beam 3
+   ```
+   On Colab run once first: `!apt-get -qq install fonts-noto-core libraqm0 libfribidi0`.
+4. Add the new rows to the [Results](#results) table (`python src/compare_results.py --names baseline baseline_ft transformer`) and push the new `results/*_scores.json` files.
+
+If the experiments do not beat the current baseline (CIDEr 68.22), keep the original baseline as the reported one and mention the experiments in the discussion.
+
+### Whole team
+- **Human evaluation for the baseline and the Transformer** on the same 50 samples used for the translation pipeline (`file_name` list in `results/human_eval_translation.csv`), so the three approaches can be compared on fluency and correctness.
+- **Report** (ELCVIA template on Overleaf): Abstract, Introduction, Related Work, Dataset (region-crop decision), Methodology (3 approaches), Experiments & Results, Human Evaluation, Discussion, Conclusion, References. Submit through the Google Form before **22 Nov 2026, 11:59 PM IST**.
 
 ## Dataset
 
@@ -238,6 +300,8 @@ Or in Python: `from evaluate import compute_scores; compute_scores(list_of_refer
 ## Git Workflow (reminder)
 
 Work on your own branch, never push to `main` directly, open a PR and merge. Do not commit data, `*.pth` or `*.h5` files. After merging, other people's code appears in `main` — run `git pull origin main`. **Do not use GitHub's "Revert" button on merged PRs** (it removed the baseline from `main` once and had to be restored).
+
+Two more rules (full text in [`CLAUDE.md`](./CLAUDE.md)): commits, pushes and PRs must carry **no AI/LLM attribution** (no `Co-Authored-By: Claude ...`, no "Generated with ..." footer), and **all new code must have detailed comments** so teammates can read and understand it later.
 
 ## Reference Papers
 
