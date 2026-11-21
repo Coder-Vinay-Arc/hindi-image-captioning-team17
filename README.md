@@ -29,7 +29,8 @@ Most image captioning research and models are built for English, while Hindi rem
 - [x] Transformer model (`src/models/transformer.py`) trained and scored on the test set — see [Results](#results)
 - [x] Transformer attention-map figures (`src/attention_maps.py`, `results/transformer_attention_*.png`)
 - [x] English captioning + translation pipeline (`src/translation_pipeline.py`) — done (BLIP + Opus-MT)
-- [ ] Human evaluation, baseline attention-map figures — not started
+- [x] Translation human evaluation — 50 test samples scored for fluency + correctness (`results/human_eval_translation.csv`)
+- [ ] Baseline attention-map figures — not started
 - [ ] Report — not started
 
 ## Task Division
@@ -129,6 +130,8 @@ The Transformer is below the baseline on every metric (CIDEr 59.13 vs 68.22). Th
 Notes: captions are short region descriptions (about 4-5 words), so BLEU-3/4 are naturally low. Many predictions are generic ("एक प्लेट पर एक सैंडविच"), and rare words become `<unk>` because the vocabulary only keeps words that appear at least twice in train. Scores and predictions are in `results/` (`<name>_test_scores.json`, `<name>_test_preds.csv`).
 
 The translation pipeline is much weaker than direct Hindi captioning because the English captioner describes the whole crop and loses Hindi-specific detail; translating the dataset's gold English captions with the same MT model reaches CIDEr 242.34, so the captioning stage — not the translation stage — is the main bottleneck. The gold-English row is an upper bound, not a captioning result: HVG's Hindi references are themselves translations of those English captions.
+
+A 50-sample human evaluation of the translation pipeline gives **fluency 3.46/5** and **correctness 3.14/5** (1–5 scale; per-sample ratings in `results/human_eval_translation.csv`).
 
 ## Repository Structure
 
