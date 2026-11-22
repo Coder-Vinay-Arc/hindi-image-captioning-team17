@@ -30,10 +30,10 @@ Most image captioning research and models are built for English, while Hindi rem
 - [x] Transformer attention-map figures (`src/attention_maps.py`, `results/transformer_attention_*.png`)
 - [x] English captioning + translation pipeline (`src/translation_pipeline.py`) — done (BLIP + Opus-MT)
 - [x] Translation human evaluation — 50 test samples scored for fluency + correctness (`results/human_eval_translation.csv`)
-- [x] Main research question answered: **direct Hindi captioning beats English captioning + translation** (CIDEr 68.22 vs 33.89) — see [Results](#results)
-- [ ] Baseline fine-tuning / optimisation experiments — **Rahul** (see [Open tasks](#open-tasks))
-- [ ] Baseline attention-map figures — **Rahul** (see [Open tasks](#open-tasks))
-- [ ] Human evaluation of the baseline and the Transformer (same 50 samples as the translation evaluation) — open, to be split in the team
+- [x] Main research question answered: **direct Hindi captioning beats English captioning + translation** (CIDEr 68.22 vs 34.70) — see [Results](#results)
+- [x] Baseline fine-tuning experiment (last ResNet block) — done by Vishal on 22 Nov: no improvement, so the original baseline stays the reported one, see [Baseline fine-tuning experiment](#baseline-fine-tuning-experiment-not-selected). Other optimisation experiments (`--dropout`, `--alpha_c`, ...) were not run.
+- [x] Baseline attention-map figures — done by Vishal (`results/baseline_attention_*.png`, same 6 test crops as the Transformer figures; the PNGs are on the shared Drive in `hvg_outputs/results`, not in git)
+- [x] Human evaluation of the baseline and the Transformer — 50 samples, blind, one rater: fluency / correctness 3.38 / 3.88 (baseline) vs 3.10 / 3.96 (Transformer), see [Evaluation](#evaluation)
 - [ ] Report — open, to be split in the team
 
 ## Task Division
@@ -69,8 +69,8 @@ Most image captioning research and models are built for English, while Hindi rem
 
 **English captioning + translation (Vivek, 21 Nov)**
 - `src/translation_pipeline.py`: BLIP English caption → Opus-MT English→Hindi. Also run on the dataset's **gold** English captions to get an upper bound for the translation step.
-- Test: CIDEr 33.89 for the full pipeline vs 242.34 for gold English + translation, so the English captioning stage is the bottleneck, not the translation stage.
-- Human evaluation of 50 test samples: fluency 3.46/5, correctness 3.14/5.
+- Test: CIDEr 34.70 for the full pipeline vs 251.78 for gold English + translation, so the English captioning stage is the bottleneck, not the translation stage.
+- Human evaluation of 50 test samples: fluency 3.54/5, correctness 3.36/5.
 
 **Housekeeping**
 - README and `CLAUDE.md` set up with the project rules (own branch + PR, no data or weights in git, no AI attribution in commits/PRs, detailed code comments).
@@ -84,7 +84,7 @@ Most image captioning research and models are built for English, while Hindi rem
 
 ## Open Tasks
 
-### Rahul — baseline improvement (not done yet)
+### Rahul — baseline improvement (attention figures and fine-tuning done by Vishal; other experiments not run)
 `rahul-baseline-model` currently has **no merged work**. Please do these on top of the current `main` (use `main`'s `src/train.py`, `src/models/baseline.py` and `src/evaluate.py` — they are what the reported baseline numbers and the Transformer depend on; do not replace them). Start from a fresh branch off the latest `main` and open a PR when finished.
 1. **Fine-tune the baseline's ResNet-50 last block** (`layer4`):
    ```bash
@@ -93,7 +93,7 @@ Most image captioning research and models are built for English, while Hindi rem
    ```
    Note: `train.py` currently uses a single learning rate for all trainable parameters, so use a smaller `--lr` when `--fine_tune` is on (or add a separate, smaller learning rate for the encoder).
 2. **Other optimisation experiments** on the baseline — pick any that fit the time, one run each: `--dropout`, `--alpha_c`, `--lr`, number of epochs, beam size at evaluation (`--beam 1/3/5`). Choose the final setting by **dev loss**, not by test score.
-3. **Baseline attention-map figures** (`results/baseline_attention_*.png`):
+3. **Baseline attention-map figures** (`results/baseline_attention_*.png`) — **done by Vishal on 22 Nov** (commands below, in case they have to be repeated):
    ```bash
    python src/attention_maps.py --model baseline --ckpt checkpoints/baseline_best.pth --n 6 --beam 3
    ```
@@ -103,7 +103,6 @@ Most image captioning research and models are built for English, while Hindi rem
 If the experiments do not beat the current baseline (CIDEr 68.22), keep the original baseline as the reported one and mention the experiments in the discussion.
 
 ### Whole team
-- **Human evaluation for the baseline and the Transformer** on the same 50 samples used for the translation pipeline (`file_name` list in `results/human_eval_translation.csv`), so the three approaches can be compared on fluency and correctness.
 - **Report** (ELCVIA template on Overleaf): Abstract, Introduction, Related Work, Dataset (region-crop decision), Methodology (3 approaches), Experiments & Results, Human Evaluation, Discussion, Conclusion, References. Submit through the Google Form before **22 Nov 2026, 11:59 PM IST**.
 
 ## Dataset
@@ -146,7 +145,7 @@ python src/dataset.py --root data/processed --split dev      # builds data/proce
 
 1. **Baseline (done):** ResNet-50 encoder (ImageNet-pretrained, frozen) → 7x7 grid of 2048-d features → LSTM decoder with additive (Bahdanau) soft attention ("Show, Attend and Tell").
 2. **Advanced (done):** the same frozen ResNet-50 grid features → 3-layer Transformer decoder with cross-attention over the 49 image cells.
-3. **Comparison pipeline (done):** BLIP (`Salesforce/blip-image-captioning-base`) English captioner → Helsinki-NLP Opus-MT (`Helsinki-NLP/opus-mt-en-hi`) English→Hindi translation. Applying the same MT model to the dataset's gold English captions gives the translation upper bound.
+3. **Comparison pipeline (done):** BLIP (`Salesforce/blip-image-captioning-base`) English captioner → Helsinki-NLP Opus-MT (`Helsinki-NLP/opus-mt-en-hi`) English→Hindi translation with 4-beam search and no-repeat n-gram blocking. Applying the same MT settings to the dataset's gold English captions gives the translation upper bound.
 
 ### Baseline training setup
 | | |
@@ -175,6 +174,19 @@ python src/dataset.py --root data/processed --split dev      # builds data/proce
 
 The final Transformer was chosen by dev loss, not by test score. The Transformer's dev loss is plain cross-entropy, while the baseline's also includes the attention penalty, so the two dev losses are not directly comparable.
 
+### Baseline fine-tuning experiment (not selected)
+Starting from the trained baseline (`baseline_best.pth`), the last ResNet block (`layer4`) was fine-tuned with `--fine_tune --freeze_bn --lr 1e-4 --encoder_lr 1e-5` (27.3 M trainable parameters, 15.0 M of them in the encoder; batch size 64; Colab T4, about 3 minutes per epoch). The run was planned for 5 epochs, but the Colab session ended during epoch 5, so 4 epochs were completed.
+
+| | Dev loss | Dev cross-entropy |
+|---|---|---|
+| Original baseline (re-measured with the current code; 3.619 in the original training log) | 3.646 | 3.019 |
+| Fine-tuned, epoch 1 | 3.645 | 3.046 |
+| Fine-tuned, epoch 2 | 3.662 | 3.062 |
+| Fine-tuned, epoch 3 | 3.679 | 3.079 |
+| Fine-tuned, epoch 4 | 3.706 | 3.105 |
+
+From epoch 2 on the dev loss rises while the train loss keeps falling (2.55 to 2.18), and the dev cross-entropy is worse than the original at every epoch. The best fine-tuned epoch (epoch 1) is only 0.001 better in dev loss, which is within noise, so the original frozen-encoder baseline stays the reported baseline. This also keeps the human evaluation (done on the original baseline) valid. For completeness, the epoch-1 fine-tuned model scores BLEU-1/2/3/4 22.98 / 11.82 / 6.81 / 4.09 and CIDEr 68.05 on the test set (original baseline: 22.82 / 12.00 / 7.00 / 4.31 and 68.22), so there is no improvement there either; the model was chosen by dev loss, not by these test scores (see [Results](#results)). Each setting was run once.
+
 ## Results
 
 Test set (1,586 region crops), scores x100:
@@ -182,18 +194,21 @@ Test set (1,586 region crops), scores x100:
 | Approach | BLEU-1 | BLEU-2 | BLEU-3 | BLEU-4 | CIDEr |
 |---|---|---|---|---|---|
 | CNN + LSTM + Attention (baseline) | 22.82 | 12.00 | 7.00 | 4.31 | 68.22 |
+| CNN + LSTM + Attention, last ResNet block fine-tuned (epoch 1, not selected) | 22.98 | 11.82 | 6.81 | 4.09 | 68.05 |
 | ResNet-50 + Transformer decoder | 21.42 | 10.94 | 5.99 | 3.18 | 59.13 |
 | ResNet-50 + Transformer decoder, dropout 0.4 (ablation) | 22.20 | 11.55 | 6.23 | 3.03 | 60.88 |
-| English captioning + translation (BLIP + Opus-MT) | 15.60 | 6.52 | 2.96 | 1.48 | 33.89 |
-| Oracle: gold English + translation (upper bound) | 53.55 | 40.00 | 30.17 | 22.10 | 242.34 |
+| English captioning + translation (BLIP + Opus-MT) | 16.13 | 6.70 | 3.06 | 1.43 | 34.70 |
+| Oracle: gold English + translation (upper bound) | 54.69 | 41.33 | 31.53 | 23.47 | 251.78 |
 
 The Transformer is below the baseline on every metric (CIDEr 59.13 vs 68.22). The dropout 0.4 ablation scored slightly higher on test than the dropout 0.3 model, but its dev loss was slightly worse (3.224 vs 3.201) and each setting was run once, so the final Transformer is the dropout 0.3 model chosen by dev loss.
 
 Notes: captions are short region descriptions (about 4-5 words), so BLEU-3/4 are naturally low. Many predictions are generic ("एक प्लेट पर एक सैंडविच"), and rare words become `<unk>` because the vocabulary only keeps words that appear at least twice in train. Scores and predictions are in `results/` (`<name>_test_scores.json`, `<name>_test_preds.csv`).
 
-The translation pipeline is much weaker than direct Hindi captioning because the English captioner describes the whole crop and loses Hindi-specific detail; translating the dataset's gold English captions with the same MT model reaches CIDEr 242.34, so the captioning stage — not the translation stage — is the main bottleneck. The gold-English row is an upper bound, not a captioning result: HVG's Hindi references are themselves translations of those English captions.
+The translation pipeline is much weaker than direct Hindi captioning because the English captioner describes the whole crop and loses Hindi-specific detail; translating the dataset's gold English captions with the same MT settings reaches CIDEr 251.78, so the captioning stage — not the translation stage — is the main bottleneck. The gold-English row is an upper bound, not a captioning result: HVG's Hindi references are themselves translations of those English captions.
 
-A 50-sample human evaluation of the translation pipeline gives **fluency 3.46/5** and **correctness 3.14/5** (1–5 scale; per-sample ratings in `results/human_eval_translation.csv`).
+The translation pipeline uses beam search (4 beams) with no-repeat n-gram blocking; this removes the degenerate repeated outputs produced by greedy decoding and improves CIDEr (33.89 → 34.70) on the test set.
+
+A 50-sample human evaluation of the translation pipeline gives **fluency 3.54/5** and **correctness 3.36/5** (1–5 scale; per-sample ratings in `results/human_eval_translation.csv`).
 
 ## Repository Structure
 
@@ -310,6 +325,25 @@ Or in Python: `from evaluate import compute_scores; compute_scores(list_of_refer
 - BLEU-1..4 / CIDEr (all three approaches, same `evaluate.py`)
 - Small human evaluation (fluency + correctness, 1–5 scale) on ~50 test samples — `results/*_test_preds.csv` has reference and prediction side by side
 - Attention map visualizations
+
+### Human evaluation of the baseline and the Transformer
+
+50 test samples (the same ones as in the translation evaluation, listed in `results/human_eval_translation.csv`), one rater, blind: the captions of both models were mixed in one shuffled sheet, so the rater did not know which model wrote which caption. Scales: fluency (is the Hindi correct and natural, 1 = broken, 5 = perfect) and correctness (does it describe the image, 1 = completely wrong, 5 = fully correct). The ratings are in `results/human_eval_baseline_transformer.csv`.
+
+| Approach | n | Fluency (1-5) | Correctness (1-5) |
+|---|---|---|---|
+| CNN + LSTM + Attention (baseline) | 50 | 3.38 | 3.88 |
+| ResNet-50 + Transformer decoder | 50 | 3.10 | 3.96 |
+
+The two models are close. Paired per image, Transformer minus baseline is -0.28 for fluency (95% interval -0.76 to +0.20) and +0.08 for correctness (-0.17 to +0.33). Both intervals include zero, so with 50 samples and a single rater we cannot say that either model is better in the human ratings. The translation pipeline was rated by a different person, so its human-evaluation numbers (see [Results](#results)) are only indicative when compared with these.
+
+To repeat the evaluation:
+```bash
+python src/human_eval_sheet.py make --preds baseline=results/baseline_test_preds.csv transformer=results/transformer_test_preds.csv
+python src/human_eval_sheet.py page      # optional: browser page with image + captions + 1-5 buttons (instead of editing the CSV)
+# fill fluency_1_5 and correctness_1_5 (whole numbers 1-5) in results/human_eval_rating_sheet.csv, then:
+python src/human_eval_sheet.py score     # prints the means and writes results/human_eval_baseline_transformer.csv
+```
 
 ## Git Workflow (reminder)
 

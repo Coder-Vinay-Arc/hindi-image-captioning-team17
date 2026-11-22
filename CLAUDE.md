@@ -17,10 +17,11 @@ This file defines the project context and rules. Each team member can show this 
 - [x] `src/dataset.py`, `src/train.py`, `src/evaluate.py` merged to `main`
 - [x] Baseline (CNN + LSTM + Attention) trained and scored: test CIDEr 68.22
 - [x] Transformer trained and scored (Vishal): test CIDEr 59.13
-- [x] English captioning + translation pipeline done and scored (Vivek): test CIDEr 33.89; its 50-sample human evaluation is done
+- [x] English captioning + translation pipeline done and scored (Vivek): test CIDEr 34.70; its 50-sample human evaluation is done
 - [x] Main finding: direct Hindi captioning beats English captioning + translation
-- [ ] Baseline fine-tuning / optimisation experiments and baseline attention-map figures -- Rahul (open)
-- [ ] Human evaluation of the baseline and the Transformer (same 50 samples as the translation evaluation) -- open
+- [x] Baseline attention-map figures (Vishal, on the shared Drive in `hvg_outputs/results`, not in git)
+- [x] Baseline fine-tuning experiment (Vishal): no improvement, original baseline kept; other optimisation experiments were not run
+- [x] Human evaluation of the baseline and the Transformer (Vishal): 50 samples, blind, one rater -- fluency / correctness 3.38 / 3.88 (baseline) vs 3.10 / 3.96 (Transformer), details in README.md
 - [ ] Report -- open
 
 **Important:** the up-to-date, detailed status, results table, progress log and open tasks are in `README.md` -- read it before starting any work. Do not rewrite `src/train.py`, `src/models/baseline.py` or `src/evaluate.py` from scratch: the reported results and the other members' code depend on them (extend them or add new files instead).
