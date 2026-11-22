@@ -41,7 +41,7 @@ Most image captioning research and models are built for English, while Hindi rem
 | Member | Branch | Task | Status |
 |---|---|---|---|
 | Vinay Kumar Gupta | `vinay-data-pipeline`, `vinay-baseline` | Data pipeline, Dataset class, baseline model + training, `evaluate.py` | Done (merged) |
-| Rahul Kumar Verma | `rahul-baseline-model` | Baseline improvement: fine-tuning and other optimisation, baseline attention maps | **Not done / open** — nothing from this task is in `main` yet, see [Open tasks](#open-tasks) |
+| Rahul Kumar Verma | `rahul-baseline-model`, `rahul-baseline-tuning` | Baseline improvement: fine-tuning and other optimisation, baseline attention maps | Partly done (merged) — PR #14 added the tuning flags to `train.py` (`encoder_lr`, `init_from`, `freeze_bn`, `eval_only`); the fine-tuning run and the baseline attention figures were then done by Vishal on 22 Nov; other optimisation experiments were not run, see [Open tasks](#open-tasks) |
 | Vishal Bhardwaj | `vishal-transformer-model` | Transformer decoder (`src/models/transformer.py`), attention figures, comparison script | Done (merged) — see [Transformer training setup](#transformer-training-setup) |
 | Vivek Kumar | `vivek-translation-eval` | English captioning + translation pipeline, its human evaluation | Done (merged) — see [Results](#results) |
 
@@ -84,26 +84,20 @@ Most image captioning research and models are built for English, while Hindi rem
 
 ## Open Tasks
 
-### Rahul — baseline improvement (attention figures and fine-tuning done by Vishal; other experiments not run)
-`rahul-baseline-model` currently has **no merged work**. Please do these on top of the current `main` (use `main`'s `src/train.py`, `src/models/baseline.py` and `src/evaluate.py` — they are what the reported baseline numbers and the Transformer depend on; do not replace them). Start from a fresh branch off the latest `main` and open a PR when finished.
-1. **Fine-tune the baseline's ResNet-50 last block** (`layer4`):
-   ```bash
-   python src/train.py --model baseline --epochs 10 --batch_size 64 --fine_tune --lr 1e-4 --name baseline_ft
-   python src/evaluate.py --model baseline_ft --split test --ckpt checkpoints/baseline_ft_best.pth --beam 3
-   ```
-   Note: `train.py` currently uses a single learning rate for all trainable parameters, so use a smaller `--lr` when `--fine_tune` is on (or add a separate, smaller learning rate for the encoder).
-2. **Other optimisation experiments** on the baseline — pick any that fit the time, one run each: `--dropout`, `--alpha_c`, `--lr`, number of epochs, beam size at evaluation (`--beam 1/3/5`). Choose the final setting by **dev loss**, not by test score.
-3. **Baseline attention-map figures** (`results/baseline_attention_*.png`) — **done by Vishal on 22 Nov** (commands below, in case they have to be repeated):
-   ```bash
-   python src/attention_maps.py --model baseline --ckpt checkpoints/baseline_best.pth --n 6 --beam 3
-   ```
-   On Colab run once first: `!apt-get -qq install fonts-noto-core libraqm0 libfribidi0`.
-4. Add the new rows to the [Results](#results) table (`python src/compare_results.py --names baseline baseline_ft transformer`) and push the new `results/*_scores.json` files.
-
-If the experiments do not beat the current baseline (CIDEr 68.22), keep the original baseline as the reported one and mention the experiments in the discussion.
+### Baseline improvement (originally Rahul's task) — status
+- **Done:** the fine-tuning flags in `train.py` (Rahul, PR #14); the fine-tuning run of the last ResNet block (Vishal, 22 Nov — no improvement, the original baseline stays the reported one, see [Baseline fine-tuning experiment](#baseline-fine-tuning-experiment-not-selected)); the baseline attention figures (Vishal, 22 Nov); the new rows in the [Results](#results) table.
+- **Not run (optional):** other optimisation experiments on the baseline (`--dropout`, `--alpha_c`, `--lr`, number of epochs, beam size 1/3/5). If someone has time, run them from a fresh branch off the latest `main`, use `main`'s `src/train.py`, `src/models/baseline.py` and `src/evaluate.py` (the reported numbers and the Transformer depend on them, do not replace them) and choose the setting by **dev loss**, not by test score. Otherwise the report just states that they were not run.
+- Do **not** merge the old `rahul-baseline-model` branch: its extra commit is an early separate version of the baseline and `train.py` that would conflict with `main`.
+- The commands, in case the figures have to be repeated (on Colab run `!apt-get -qq install fonts-noto-core libraqm0 libfribidi0` once first):
+  ```bash
+  python src/attention_maps.py --model baseline --ckpt checkpoints/baseline_best.pth --n 6 --beam 3
+  ```
 
 ### Whole team
 - **Report** (ELCVIA template on Overleaf): Abstract, Introduction, Related Work, Dataset (region-crop decision), Methodology (3 approaches), Experiments & Results, Human Evaluation, Discussion, Conclusion, References. Submit through the Google Form before **22 Nov 2026, 11:59 PM IST**.
+- **Report figures:** the attention-map PNGs (`baseline_attention_*.png`, `transformer_attention_*.png`) are not in git; download them from the shared Drive (`hvg_outputs/results`) and upload them to Overleaf.
+- **Report text for the human evaluation:** the translation pipeline was rated by a different person than the baseline and the Transformer (one rater each, 50 samples), so those numbers are only indicative when compared. The fine-tuning run completed 4 of the 5 planned epochs because the Colab session ended.
+- **Result files not in git:** the baseline and Transformer score files (`*_test_scores.json`) are not in `results/`; their numbers are in the [Results](#results) table.
 
 ## Dataset
 

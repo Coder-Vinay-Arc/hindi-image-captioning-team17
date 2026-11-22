@@ -48,7 +48,7 @@ In Hindi Visual Genome, captions describe a **region (bounding box) within an im
 │   ├── translation_pipeline.py  # English captioning + MT pipeline (DONE)
 │   ├── train.py          # Training loop, checkpoint save/load (DONE)
 │   ├── evaluate.py       # BLEU / CIDEr scoring, used by all approaches (DONE)
-│   ├── attention_maps.py # Attention-map figures (DONE; baseline figures still to generate)
+│   ├── attention_maps.py # Attention-map figures (DONE; baseline + Transformer figures generated, PNGs on the shared Drive)
 │   └── compare_results.py # Markdown score table from results/*_scores.json (DONE)
 ├── checkpoints/          # *.pth model weights (NOT committed -- kept on the shared Drive)
 ├── results/              # Score tables, predictions, human-eval sheets, attention map images
