@@ -30,7 +30,7 @@ Most image captioning research and models are built for English, while Hindi rem
 - [x] Transformer attention-map figures (`src/attention_maps.py`, `results/transformer_attention_*.png`)
 - [x] English captioning + translation pipeline (`src/translation_pipeline.py`) — done (BLIP + Opus-MT)
 - [x] Translation human evaluation — 50 test samples scored for fluency + correctness (`results/human_eval_translation.csv`)
-- [x] Main research question answered: **direct Hindi captioning beats English captioning + translation** (CIDEr 68.22 vs 33.89) — see [Results](#results)
+- [x] Main research question answered: **direct Hindi captioning beats English captioning + translation** (CIDEr 68.22 vs 34.70) — see [Results](#results)
 - [ ] Baseline fine-tuning / optimisation experiments — **Rahul** (see [Open tasks](#open-tasks))
 - [ ] Baseline attention-map figures — **Rahul** (see [Open tasks](#open-tasks))
 - [x] Human evaluation of the baseline and the Transformer — 50 samples, blind, one rater: fluency / correctness 3.38 / 3.88 (baseline) vs 3.10 / 3.96 (Transformer), see [Evaluation](#evaluation)
@@ -69,8 +69,8 @@ Most image captioning research and models are built for English, while Hindi rem
 
 **English captioning + translation (Vivek, 21 Nov)**
 - `src/translation_pipeline.py`: BLIP English caption → Opus-MT English→Hindi. Also run on the dataset's **gold** English captions to get an upper bound for the translation step.
-- Test: CIDEr 33.89 for the full pipeline vs 242.34 for gold English + translation, so the English captioning stage is the bottleneck, not the translation stage.
-- Human evaluation of 50 test samples: fluency 3.46/5, correctness 3.14/5.
+- Test: CIDEr 34.70 for the full pipeline vs 251.78 for gold English + translation, so the English captioning stage is the bottleneck, not the translation stage.
+- Human evaluation of 50 test samples: fluency 3.54/5, correctness 3.36/5.
 
 **Housekeeping**
 - README and `CLAUDE.md` set up with the project rules (own branch + PR, no data or weights in git, no AI attribution in commits/PRs, detailed code comments).
