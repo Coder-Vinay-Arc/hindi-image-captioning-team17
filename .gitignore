@@ -228,3 +228,6 @@ hindi-visual-genome-11/
 results/*.pth
 *.pth
 *.h5
+
+# Personal demo pictures made with caption_image.py --save_dir results/demo (never commit photos)
+results/demo/
