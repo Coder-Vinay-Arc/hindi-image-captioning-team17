@@ -185,7 +185,7 @@ Starting from the trained baseline (`baseline_best.pth`), the last ResNet block 
 | Fine-tuned, epoch 3 | 3.679 | 3.079 |
 | Fine-tuned, epoch 4 | 3.706 | 3.105 |
 
-From epoch 2 on the dev loss rises while the train loss keeps falling (2.55 to 2.18), and the dev cross-entropy is worse than the original at every epoch. The best fine-tuned epoch (epoch 1) is only 0.001 better in dev loss, which is within noise, so the original frozen-encoder baseline stays the reported baseline. This also keeps the human evaluation (done on the original baseline) valid. Each setting was run once.
+From epoch 2 on the dev loss rises while the train loss keeps falling (2.55 to 2.18), and the dev cross-entropy is worse than the original at every epoch. The best fine-tuned epoch (epoch 1) is only 0.001 better in dev loss, which is within noise, so the original frozen-encoder baseline stays the reported baseline. This also keeps the human evaluation (done on the original baseline) valid. For completeness, the epoch-1 fine-tuned model scores BLEU-1/2/3/4 22.98 / 11.82 / 6.81 / 4.09 and CIDEr 68.05 on the test set (original baseline: 22.82 / 12.00 / 7.00 / 4.31 and 68.22), so there is no improvement there either; the model was chosen by dev loss, not by these test scores (see [Results](#results)). Each setting was run once.
 
 ## Results
 
@@ -194,6 +194,7 @@ Test set (1,586 region crops), scores x100:
 | Approach | BLEU-1 | BLEU-2 | BLEU-3 | BLEU-4 | CIDEr |
 |---|---|---|---|---|---|
 | CNN + LSTM + Attention (baseline) | 22.82 | 12.00 | 7.00 | 4.31 | 68.22 |
+| CNN + LSTM + Attention, last ResNet block fine-tuned (epoch 1, not selected) | 22.98 | 11.82 | 6.81 | 4.09 | 68.05 |
 | ResNet-50 + Transformer decoder | 21.42 | 10.94 | 5.99 | 3.18 | 59.13 |
 | ResNet-50 + Transformer decoder, dropout 0.4 (ablation) | 22.20 | 11.55 | 6.23 | 3.03 | 60.88 |
 | English captioning + translation (BLIP + Opus-MT) | 16.13 | 6.70 | 3.06 | 1.43 | 34.70 |
