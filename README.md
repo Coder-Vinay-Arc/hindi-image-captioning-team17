@@ -31,8 +31,8 @@ Most image captioning research and models are built for English, while Hindi rem
 - [x] English captioning + translation pipeline (`src/translation_pipeline.py`) — done (BLIP + Opus-MT)
 - [x] Translation human evaluation — 50 test samples scored for fluency + correctness (`results/human_eval_translation.csv`)
 - [x] Main research question answered: **direct Hindi captioning beats English captioning + translation** (CIDEr 68.22 vs 34.70) — see [Results](#results)
-- [ ] Baseline fine-tuning / optimisation experiments — **Rahul** (see [Open tasks](#open-tasks))
-- [ ] Baseline attention-map figures — **Rahul** (see [Open tasks](#open-tasks))
+- [ ] Baseline fine-tuning / optimisation experiments — **Rahul**, not run so far (see [Open tasks](#open-tasks))
+- [x] Baseline attention-map figures — done by Vishal (`results/baseline_attention_*.png`, same 6 test crops as the Transformer figures; the PNGs are on the shared Drive in `hvg_outputs/results`, not in git)
 - [x] Human evaluation of the baseline and the Transformer — 50 samples, blind, one rater: fluency / correctness 3.38 / 3.88 (baseline) vs 3.10 / 3.96 (Transformer), see [Evaluation](#evaluation)
 - [ ] Report — open, to be split in the team
 
@@ -84,7 +84,7 @@ Most image captioning research and models are built for English, while Hindi rem
 
 ## Open Tasks
 
-### Rahul — baseline improvement (not done yet)
+### Rahul — baseline improvement (attention figures done, fine-tuning not done yet)
 `rahul-baseline-model` currently has **no merged work**. Please do these on top of the current `main` (use `main`'s `src/train.py`, `src/models/baseline.py` and `src/evaluate.py` — they are what the reported baseline numbers and the Transformer depend on; do not replace them). Start from a fresh branch off the latest `main` and open a PR when finished.
 1. **Fine-tune the baseline's ResNet-50 last block** (`layer4`):
    ```bash
@@ -93,7 +93,7 @@ Most image captioning research and models are built for English, while Hindi rem
    ```
    Note: `train.py` currently uses a single learning rate for all trainable parameters, so use a smaller `--lr` when `--fine_tune` is on (or add a separate, smaller learning rate for the encoder).
 2. **Other optimisation experiments** on the baseline — pick any that fit the time, one run each: `--dropout`, `--alpha_c`, `--lr`, number of epochs, beam size at evaluation (`--beam 1/3/5`). Choose the final setting by **dev loss**, not by test score.
-3. **Baseline attention-map figures** (`results/baseline_attention_*.png`):
+3. **Baseline attention-map figures** (`results/baseline_attention_*.png`) — **done by Vishal on 22 Nov** (commands below, in case they have to be repeated):
    ```bash
    python src/attention_maps.py --model baseline --ckpt checkpoints/baseline_best.pth --n 6 --beam 3
    ```
