@@ -19,7 +19,8 @@ This file defines the project context and rules. Each team member can show this 
 - [x] Transformer trained and scored (Vishal): test CIDEr 59.13
 - [x] English captioning + translation pipeline done and scored (Vivek): test CIDEr 34.70; its 50-sample human evaluation is done
 - [x] Main finding: direct Hindi captioning beats English captioning + translation
-- [ ] Baseline fine-tuning / optimisation experiments and baseline attention-map figures -- Rahul (open)
+- [x] Baseline attention-map figures (Vishal, on the shared Drive in `hvg_outputs/results`, not in git)
+- [ ] Baseline fine-tuning / optimisation experiments -- Rahul (not run so far)
 - [x] Human evaluation of the baseline and the Transformer (Vishal): 50 samples, blind, one rater -- fluency / correctness 3.38 / 3.88 (baseline) vs 3.10 / 3.96 (Transformer), details in README.md
 - [ ] Report -- open
 
