@@ -37,12 +37,15 @@ Loading a trained model elsewhere (e.g. evaluate.py):
     model, vocab = load_checkpoint("checkpoints/baseline_best.pth", device)
 """
 
+# Standard library: argparse (command-line options), json (save the loss history), os (paths), sys (imports
+# and exit), time (time per epoch).
 import argparse
 import json
 import os
 import sys
 import time
 
+# PyTorch is the deep-learning library; torch.nn gives us the loss function and the layers.
 import torch
 import torch.nn as nn
 
@@ -50,6 +53,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # so `models` an
 from dataset import Vocab, get_dataloader  # noqa: E402
 
 
+# Creates the model chosen with --model. Both models have the same interface, so the rest of the code does not
+# care which one it is.
 def build_model(name, vocab_size, **kw):
     if name == "baseline":
         from models.baseline import CaptionModel
@@ -60,6 +65,8 @@ def build_model(name, vocab_size, **kw):
     raise ValueError(f"unknown model: {name}")
 
 
+# Saves everything needed to load the model later: weights, config, vocab, optimizer state, epoch and best dev
+# loss.
 def save_checkpoint(path, model, vocab, model_name, optimizer=None, epoch=0, best_val=float("inf")):
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     torch.save({
@@ -73,6 +80,8 @@ def save_checkpoint(path, model, vocab, model_name, optimizer=None, epoch=0, bes
     }, path)
 
 
+# Used by evaluate.py and attention_maps.py. The saved config rebuilds the same model; pretrained=False
+# because the trained weights are loaded anyway.
 def load_checkpoint(path, device="cpu"):
     """Rebuild a trained model + its vocab from a checkpoint. Returns (model, vocab)."""
     ckpt = torch.load(path, map_location=device)
@@ -110,42 +119,67 @@ def run_epoch(model, loader, criterion, device, optimizer=None, alpha_c=1.0, gra
       - loss = cross-entropy + alpha_c * attention penalty (what is optimised / used to pick *_best.pth)
       - ce   = cross-entropy alone, comparable between runs with different --alpha_c values
     """
+    # If an optimizer is given we train (and learn from the loss). Without it we only evaluate, for example on
+    # the dev set.
     train = optimizer is not None
+    # Train mode switches dropout on (random switching-off of values against overfitting). Eval mode switches
+    # it off, so evaluation is not random.
     model.train(train)
     if train and freeze_bn:
         freeze_batchnorm(model)  # must come AFTER model.train(), which would switch BN back to training mode
+    # Running sums, used to compute the average loss over all examples at the end.
     total, total_ce, n = 0.0, 0.0, 0
+    # Loop over batches: images (B,3,224,224), caps (B,T) with <start> first and <end> last.
     for i, (images, caps, lengths) in enumerate(loader):
         images, caps = images.to(device), caps.to(device)  # (B, 3, 224, 224), (B, T)
+        # Gradients are only needed for learning. Switching them off during evaluation saves memory and time.
         with torch.set_grad_enabled(train):
             logits, alphas = model(images, caps)  # (B, T-1, vocab), (B, T-1, 49) or None
             targets = caps[:, 1:]  # predict everything after <start>
+            # Teacher forcing: the model reads the REAL caption words and must predict the NEXT word at every
+            # position, so the targets are the caption shifted by one. Cross-entropy gives a large loss when
+            # the model gives a low probability to the correct next word.
             ce = criterion(logits.reshape(-1, logits.size(-1)), targets.reshape(-1))
             loss = ce
+            # Doubly-stochastic attention penalty (baseline only): over the whole caption every image region
+            # should be looked at about once, so the total attention of each region should be close to 1.
             if alphas is not None and alpha_c > 0:  # doubly-stochastic attention: each region should get ~1 total attention
                 loss = loss + alpha_c * ((1.0 - alphas.sum(dim=1)) ** 2).mean()
+        # The learning step. The order matters: clear old gradients, compute new ones, clip them, then update
+        # the weights.
         if train:
+            # Remove the gradients of the previous batch (PyTorch would add them up otherwise).
             optimizer.zero_grad()
+            # Backpropagation: computes how much every weight contributed to the loss (the gradients).
             loss.backward()
+            # Gradient clipping: if the gradients are too big they are scaled down, so one bad batch cannot
+            # make a huge, unstable update.
             nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+            # Adam moves every weight a small step in the direction that lowers the loss.
             optimizer.step()
+        # Multiply by the batch size so the final average is per example, even if the last batch is smaller.
         total += loss.item() * images.size(0)
         total_ce += ce.item() * images.size(0)
         n += images.size(0)
+        # Print the loss every log_every batches, so we can see the training progress.
         if train and (i + 1) % log_every == 0:
             print(f"    batch {i + 1}/{len(loader)}  loss {loss.item():.3f}", flush=True)
     return total / max(n, 1), total_ce / max(n, 1)
 
 
+# Prints a couple of predictions after every epoch, so we can see by eye if the model is learning (no
+# gradients needed here).
 @torch.no_grad()
 def show_sample(model, loader, vocab, device):
     model.eval()
     images, caps, _ = next(iter(loader))
+    # beam_size=1 means greedy decoding (always take the best word). Good enough for a quick look.
     ids, _ = model.caption(images[:2].to(device), vocab.start_id, vocab.end_id, beam_size=1)
     for k in range(len(ids)):
         print(f"    ref : {vocab.decode(caps[k])}\n    pred: {vocab.decode(ids[k])}", flush=True)
 
 
+# Reads the options, builds the data and the model, then runs the epoch loop and saves the checkpoints.
 def main():
     ap = argparse.ArgumentParser(description="Train a captioning model")
     ap.add_argument("--model", default="baseline", choices=["baseline", "transformer"])
@@ -176,12 +210,14 @@ def main():
                     help="with --init_from: print dev loss and dev cross-entropy of that checkpoint, then exit")
     args = ap.parse_args()
 
+    # Fixed random seed so a run can be repeated. Use the GPU if there is one.
     torch.manual_seed(args.seed)
     sys.stdout.reconfigure(encoding="utf-8")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     name = args.name or args.model
     print(f"device: {device}")
 
+    # Load the shared vocabulary. Never rebuild it: all team members must use the same one.
     vocab_path = os.path.join(args.data_root, "vocab.json")
     if os.path.exists(vocab_path):
         vocab = Vocab.load(vocab_path)
@@ -190,13 +226,17 @@ def main():
         vocab.save(vocab_path)
     print(f"vocab size: {len(vocab)}")
 
+    # Data loaders: the train split is shuffled, the dev split is not.
     train_loader = get_dataloader(args.train_split, vocab, args.data_root, args.batch_size,
                                   num_workers=args.num_workers)
     val_loader = get_dataloader(args.val_split, vocab, args.data_root, args.batch_size, shuffle=False,
                                 num_workers=args.num_workers)
 
+    # Build the model. --dropout is passed only when the user gives it, otherwise the model's own default is
+    # used.
     extra = {} if args.dropout is None else {"dropout": args.dropout}
     model = build_model(args.model, len(vocab), fine_tune=args.fine_tune, **extra).to(device)
+    # The loss function. ignore_index skips <pad> positions, because padding is not a real word.
     criterion = nn.CrossEntropyLoss(ignore_index=vocab.pad_id)
 
     # --init_from: copy the weights of an already trained model into the freshly built one. The new model
@@ -232,6 +272,7 @@ def main():
     print(f"trainable parameters: {sum(p.numel() for p in params):,} "
           f"(encoder {sum(p.numel() for p in enc_params):,})")
 
+    # Training state. --resume restores the weights, optimizer and epoch of an earlier run.
     start_epoch, best_val, history = 0, float("inf"), []
     if args.resume:
         ckpt = torch.load(args.resume, map_location=device)
@@ -241,11 +282,17 @@ def main():
         start_epoch, best_val = ckpt["epoch"], ckpt["best_val"]
         print(f"resumed from {args.resume} at epoch {start_epoch}")
 
+    # Folder for the loss history files.
     os.makedirs("results", exist_ok=True)
+    # One epoch = one full pass over the training set. After each epoch we measure the loss on the dev set,
+    # which the model has never learned from. If the train loss keeps falling but the dev loss rises, the
+    # model is overfitting.
     for epoch in range(start_epoch, args.epochs):
         t0 = time.time()
+        # Train for one epoch (an optimizer is given, so the weights are updated).
         tr, _ = run_epoch(model, train_loader, criterion, device, optimizer, args.alpha_c,
                           freeze_bn=args.freeze_bn)
+        # Evaluate on the dev set (no optimizer, so no learning).
         va, va_ce = run_epoch(model, val_loader, criterion, device, None, args.alpha_c)
         print(f"epoch {epoch + 1}/{args.epochs}  train {tr:.3f}  dev {va:.3f}  dev ce {va_ce:.3f}  "
               f"({time.time() - t0:.0f}s)")
@@ -256,8 +303,11 @@ def main():
         with open(f"results/{name}_history.json", "w") as f:
             json.dump(history, f, indent=1)
 
+        # Always save the latest state, so an interrupted run can be resumed.
         save_checkpoint(os.path.join(args.ckpt_dir, f"{name}_last.pth"), model, vocab, args.model,
                         optimizer, epoch + 1, best_val)
+        # Keep a separate *_best.pth for the lowest dev loss (this one is used for testing), because the last
+        # epoch may already be overfitted.
         if va < best_val:
             best_val = va
             save_checkpoint(os.path.join(args.ckpt_dir, f"{name}_best.pth"), model, vocab, args.model,
@@ -265,5 +315,6 @@ def main():
             print(f"    saved best (dev {va:.3f})")
 
 
+# Run main() only when the file is executed directly.
 if __name__ == "__main__":
     main()
