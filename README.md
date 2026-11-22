@@ -224,6 +224,7 @@ A 50-sample human evaluation of the translation pipeline gives **fluency 3.54/5*
 │   ├── train.py            # training loop, save/load checkpoints
 │   ├── evaluate.py         # BLEU, CIDEr (reusable for every approach)
 │   ├── attention_maps.py   # attention-map figures for random test images
+│   ├── caption_image.py    # caption YOUR OWN image with a trained checkpoint (see "Try the model on your own image")
 │   ├── translation_pipeline.py  # BLIP English caption + Opus-MT Hindi translation
 │   └── compare_results.py  # Markdown score table from results/*_scores.json
 ├── checkpoints/       # *.pth (NOT committed)
@@ -267,18 +268,53 @@ python src/evaluate.py --model translation_gold_en --split test --pred_csv resul
 ```
 
 ### Try the model on your own image
-Download `baseline_best.pth` (and optionally `transformer_best.pth`) from the shared Drive folder (`checkpoints/`) into the local `checkpoints/` folder, then:
+Anyone in the team can give the trained model **any photo** and see the Hindi caption it produces, using `src/caption_image.py`. You do **not** need the dataset, a GPU or any training — only the code, the Python packages and one checkpoint file.
+
+**One-time setup**
+1. Get the latest code: `git checkout main && git pull origin main`.
+2. Install the packages: `pip install -r requirements.txt`.
+3. Download the trained weights from the shared Drive folder (link in [Dataset](#dataset), inside its `checkpoints/` folder) and put them in the local `checkpoints/` folder of the repo (create it if it does not exist):
+   - `baseline_best.pth` — the reported baseline (CNN + LSTM + Attention), about 240 MB. This is the one you need.
+   - `transformer_best.pth` — optional, only if you want to compare it with the baseline (ask Vishal if you cannot find it).
+
+   The weights are **not** in git (too large), so `git pull` does not bring them.
+
+**Caption an image** (run from the repo root; put your own file path after `--image`, use quotes if the path has spaces)
 ```bash
-# one image, one model -> prints the Hindi caption
-python src/caption_image.py --image my_photo.jpg --ckpt checkpoints/baseline_best.pth
+# one image, one model -> prints the Hindi caption in the terminal
+python src/caption_image.py --image "C:\Users\you\Pictures\photo.jpg" --ckpt checkpoints/baseline_best.pth
 
-# compare baseline and Transformer on the same image, and save a picture with the caption
-python src/caption_image.py --image my_photo.jpg --ckpt checkpoints/baseline_best.pth checkpoints/transformer_best.pth --save_dir results/demo
+# several images, or a whole folder of images
+python src/caption_image.py --image photo1.jpg photo2.png --ckpt checkpoints/baseline_best.pth
+python src/caption_image.py --image my_photos/ --ckpt checkpoints/baseline_best.pth
 
-# caption only a region of a big photo: --box X Y WIDTH HEIGHT (pixels)
+# compare the baseline and the Transformer on the same image
+python src/caption_image.py --image photo.jpg --ckpt checkpoints/baseline_best.pth checkpoints/transformer_best.pth
+
+# also save a picture with the caption written above it (goes to results/demo/)
+python src/caption_image.py --image photo.jpg --ckpt checkpoints/baseline_best.pth --save_dir results/demo
+
+# caption only one part of a big photo: --box X Y WIDTH HEIGHT (in pixels)
 python src/caption_image.py --image street.jpg --box 120 80 200 160 --ckpt checkpoints/baseline_best.pth
 ```
-The models were trained on small region crops, so they work best on a photo that shows one main object or a small scene; for a busy photo use `--box` to pick the part to caption.
+Example output:
+```
+photo.jpg
+  baseline_best          यह एक व्यक्ति है
+```
+
+**What to expect**
+- The models were trained on small **region crops** (one object or a small scene, captions of about 4-5 words), not on whole busy photos. They work best on a photo with one clear main object or person; for a crowded photo use `--box` to pick the part to caption.
+- The captions are short and often generic, and the model is not always right (test CIDEr 68.22) — that is expected, see [Results](#results). Trying a few images, including a wrong one, is useful material for the report's discussion.
+- It runs on a normal laptop CPU (a few seconds per image); a GPU is used automatically if there is one. It also works on Colab: clone the repo, put `baseline_best.pth` in `checkpoints/` and run the same command.
+
+**Troubleshooting**
+- `not found, skipped: ...` — the image path is wrong (check the spelling, and use quotes if it has spaces).
+- `FileNotFoundError ... checkpoints/baseline_best.pth` — the weights are not in the local `checkpoints/` folder yet (setup step 3).
+- `ModuleNotFoundError` — run `pip install -r requirements.txt`.
+- Hindi text looks like empty boxes in the saved picture — your system has no Devanagari font; the caption printed in the terminal is still correct (on Windows, "Nirmala UI" is used automatically).
+
+**Privacy:** keep your personal photos out of git. `results/demo/` is in `.gitignore`, so pictures saved there are never committed — do not `git add` your photos or copy them into other tracked folders.
 
 ### Loading the data in your own code
 ```python
