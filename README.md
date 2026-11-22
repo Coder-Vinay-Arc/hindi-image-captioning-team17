@@ -31,7 +31,7 @@ Most image captioning research and models are built for English, while Hindi rem
 - [x] English captioning + translation pipeline (`src/translation_pipeline.py`) — done (BLIP + Opus-MT)
 - [x] Translation human evaluation — 50 test samples scored for fluency + correctness (`results/human_eval_translation.csv`)
 - [x] Main research question answered: **direct Hindi captioning beats English captioning + translation** (CIDEr 68.22 vs 34.70) — see [Results](#results)
-- [ ] Baseline fine-tuning / optimisation experiments — **Rahul**, not run so far (see [Open tasks](#open-tasks))
+- [x] Baseline fine-tuning experiment (last ResNet block) — done by Vishal on 22 Nov: no improvement, so the original baseline stays the reported one, see [Baseline fine-tuning experiment](#baseline-fine-tuning-experiment-not-selected). Other optimisation experiments (`--dropout`, `--alpha_c`, ...) were not run.
 - [x] Baseline attention-map figures — done by Vishal (`results/baseline_attention_*.png`, same 6 test crops as the Transformer figures; the PNGs are on the shared Drive in `hvg_outputs/results`, not in git)
 - [x] Human evaluation of the baseline and the Transformer — 50 samples, blind, one rater: fluency / correctness 3.38 / 3.88 (baseline) vs 3.10 / 3.96 (Transformer), see [Evaluation](#evaluation)
 - [ ] Report — open, to be split in the team
@@ -84,7 +84,7 @@ Most image captioning research and models are built for English, while Hindi rem
 
 ## Open Tasks
 
-### Rahul — baseline improvement (attention figures done, fine-tuning not done yet)
+### Rahul — baseline improvement (attention figures and fine-tuning done by Vishal; other experiments not run)
 `rahul-baseline-model` currently has **no merged work**. Please do these on top of the current `main` (use `main`'s `src/train.py`, `src/models/baseline.py` and `src/evaluate.py` — they are what the reported baseline numbers and the Transformer depend on; do not replace them). Start from a fresh branch off the latest `main` and open a PR when finished.
 1. **Fine-tune the baseline's ResNet-50 last block** (`layer4`):
    ```bash
@@ -173,6 +173,19 @@ python src/dataset.py --root data/processed --split dev      # builds data/proce
 | Ablation | dropout 0.4, 12 epochs: best epoch 8, dev loss 3.224 |
 
 The final Transformer was chosen by dev loss, not by test score. The Transformer's dev loss is plain cross-entropy, while the baseline's also includes the attention penalty, so the two dev losses are not directly comparable.
+
+### Baseline fine-tuning experiment (not selected)
+Starting from the trained baseline (`baseline_best.pth`), the last ResNet block (`layer4`) was fine-tuned with `--fine_tune --freeze_bn --lr 1e-4 --encoder_lr 1e-5` (27.3 M trainable parameters, 15.0 M of them in the encoder; batch size 64; Colab T4, about 3 minutes per epoch). The run was planned for 5 epochs, but the Colab session ended during epoch 5, so 4 epochs were completed.
+
+| | Dev loss | Dev cross-entropy |
+|---|---|---|
+| Original baseline (re-measured with the current code; 3.619 in the original training log) | 3.646 | 3.019 |
+| Fine-tuned, epoch 1 | 3.645 | 3.046 |
+| Fine-tuned, epoch 2 | 3.662 | 3.062 |
+| Fine-tuned, epoch 3 | 3.679 | 3.079 |
+| Fine-tuned, epoch 4 | 3.706 | 3.105 |
+
+From epoch 2 on the dev loss rises while the train loss keeps falling (2.55 to 2.18), and the dev cross-entropy is worse than the original at every epoch. The best fine-tuned epoch (epoch 1) is only 0.001 better in dev loss, which is within noise, so the original frozen-encoder baseline stays the reported baseline. This also keeps the human evaluation (done on the original baseline) valid. Each setting was run once.
 
 ## Results
 
