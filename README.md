@@ -146,7 +146,7 @@ python src/dataset.py --root data/processed --split dev      # builds data/proce
 
 1. **Baseline (done):** ResNet-50 encoder (ImageNet-pretrained, frozen) → 7x7 grid of 2048-d features → LSTM decoder with additive (Bahdanau) soft attention ("Show, Attend and Tell").
 2. **Advanced (done):** the same frozen ResNet-50 grid features → 3-layer Transformer decoder with cross-attention over the 49 image cells.
-3. **Comparison pipeline (done):** BLIP (`Salesforce/blip-image-captioning-base`) English captioner → Helsinki-NLP Opus-MT (`Helsinki-NLP/opus-mt-en-hi`) English→Hindi translation. Applying the same MT model to the dataset's gold English captions gives the translation upper bound.
+3. **Comparison pipeline (done):** BLIP (`Salesforce/blip-image-captioning-base`) English captioner → Helsinki-NLP Opus-MT (`Helsinki-NLP/opus-mt-en-hi`) English→Hindi translation with 4-beam search and no-repeat n-gram blocking. Applying the same MT settings to the dataset's gold English captions gives the translation upper bound.
 
 ### Baseline training setup
 | | |
@@ -184,16 +184,18 @@ Test set (1,586 region crops), scores x100:
 | CNN + LSTM + Attention (baseline) | 22.82 | 12.00 | 7.00 | 4.31 | 68.22 |
 | ResNet-50 + Transformer decoder | 21.42 | 10.94 | 5.99 | 3.18 | 59.13 |
 | ResNet-50 + Transformer decoder, dropout 0.4 (ablation) | 22.20 | 11.55 | 6.23 | 3.03 | 60.88 |
-| English captioning + translation (BLIP + Opus-MT) | 15.60 | 6.52 | 2.96 | 1.48 | 33.89 |
-| Oracle: gold English + translation (upper bound) | 53.55 | 40.00 | 30.17 | 22.10 | 242.34 |
+| English captioning + translation (BLIP + Opus-MT) | 16.13 | 6.70 | 3.06 | 1.43 | 34.70 |
+| Oracle: gold English + translation (upper bound) | 54.69 | 41.33 | 31.53 | 23.47 | 251.78 |
 
 The Transformer is below the baseline on every metric (CIDEr 59.13 vs 68.22). The dropout 0.4 ablation scored slightly higher on test than the dropout 0.3 model, but its dev loss was slightly worse (3.224 vs 3.201) and each setting was run once, so the final Transformer is the dropout 0.3 model chosen by dev loss.
 
 Notes: captions are short region descriptions (about 4-5 words), so BLEU-3/4 are naturally low. Many predictions are generic ("एक प्लेट पर एक सैंडविच"), and rare words become `<unk>` because the vocabulary only keeps words that appear at least twice in train. Scores and predictions are in `results/` (`<name>_test_scores.json`, `<name>_test_preds.csv`).
 
-The translation pipeline is much weaker than direct Hindi captioning because the English captioner describes the whole crop and loses Hindi-specific detail; translating the dataset's gold English captions with the same MT model reaches CIDEr 242.34, so the captioning stage — not the translation stage — is the main bottleneck. The gold-English row is an upper bound, not a captioning result: HVG's Hindi references are themselves translations of those English captions.
+The translation pipeline is much weaker than direct Hindi captioning because the English captioner describes the whole crop and loses Hindi-specific detail; translating the dataset's gold English captions with the same MT settings reaches CIDEr 251.78, so the captioning stage — not the translation stage — is the main bottleneck. The gold-English row is an upper bound, not a captioning result: HVG's Hindi references are themselves translations of those English captions.
 
-A 50-sample human evaluation of the translation pipeline gives **fluency 3.46/5** and **correctness 3.14/5** (1–5 scale; per-sample ratings in `results/human_eval_translation.csv`).
+The translation pipeline uses beam search (4 beams) with no-repeat n-gram blocking; this removes the degenerate repeated outputs produced by greedy decoding and improves CIDEr (33.89 → 34.70) on the test set.
+
+A 50-sample human evaluation of the translation pipeline gives **fluency 3.54/5** and **correctness 3.36/5** (1–5 scale; per-sample ratings in `results/human_eval_translation.csv`).
 
 ## Repository Structure
 
