@@ -33,7 +33,7 @@ Most image captioning research and models are built for English, while Hindi rem
 - [x] Main research question answered: **direct Hindi captioning beats English captioning + translation** (CIDEr 68.22 vs 33.89) — see [Results](#results)
 - [ ] Baseline fine-tuning / optimisation experiments — **Rahul** (see [Open tasks](#open-tasks))
 - [ ] Baseline attention-map figures — **Rahul** (see [Open tasks](#open-tasks))
-- [ ] Human evaluation of the baseline and the Transformer (same 50 samples as the translation evaluation) — open, to be split in the team
+- [x] Human evaluation of the baseline and the Transformer — 50 samples, blind, one rater: fluency / correctness 3.38 / 3.88 (baseline) vs 3.10 / 3.96 (Transformer), see [Evaluation](#evaluation)
 - [ ] Report — open, to be split in the team
 
 ## Task Division
@@ -103,7 +103,6 @@ Most image captioning research and models are built for English, while Hindi rem
 If the experiments do not beat the current baseline (CIDEr 68.22), keep the original baseline as the reported one and mention the experiments in the discussion.
 
 ### Whole team
-- **Human evaluation for the baseline and the Transformer** on the same 50 samples used for the translation pipeline (`file_name` list in `results/human_eval_translation.csv`), so the three approaches can be compared on fluency and correctness.
 - **Report** (ELCVIA template on Overleaf): Abstract, Introduction, Related Work, Dataset (region-crop decision), Methodology (3 approaches), Experiments & Results, Human Evaluation, Discussion, Conclusion, References. Submit through the Google Form before **22 Nov 2026, 11:59 PM IST**.
 
 ## Dataset
@@ -298,6 +297,25 @@ Or in Python: `from evaluate import compute_scores; compute_scores(list_of_refer
 - BLEU-1..4 / CIDEr (all three approaches, same `evaluate.py`)
 - Small human evaluation (fluency + correctness, 1–5 scale) on ~50 test samples — `results/*_test_preds.csv` has reference and prediction side by side
 - Attention map visualizations
+
+### Human evaluation of the baseline and the Transformer
+
+50 test samples (the same ones as in the translation evaluation, listed in `results/human_eval_translation.csv`), one rater, blind: the captions of both models were mixed in one shuffled sheet, so the rater did not know which model wrote which caption. Scales: fluency (is the Hindi correct and natural, 1 = broken, 5 = perfect) and correctness (does it describe the image, 1 = completely wrong, 5 = fully correct). The ratings are in `results/human_eval_baseline_transformer.csv`.
+
+| Approach | n | Fluency (1-5) | Correctness (1-5) |
+|---|---|---|---|
+| CNN + LSTM + Attention (baseline) | 50 | 3.38 | 3.88 |
+| ResNet-50 + Transformer decoder | 50 | 3.10 | 3.96 |
+
+The two models are close. Paired per image, Transformer minus baseline is -0.28 for fluency (95% interval -0.76 to +0.20) and +0.08 for correctness (-0.17 to +0.33). Both intervals include zero, so with 50 samples and a single rater we cannot say that either model is better in the human ratings. The translation pipeline was rated by a different person, so its human-evaluation numbers (see [Results](#results)) are only indicative when compared with these.
+
+To repeat the evaluation:
+```bash
+python src/human_eval_sheet.py make --preds baseline=results/baseline_test_preds.csv transformer=results/transformer_test_preds.csv
+python src/human_eval_sheet.py page      # optional: browser page with image + captions + 1-5 buttons (instead of editing the CSV)
+# fill fluency_1_5 and correctness_1_5 (whole numbers 1-5) in results/human_eval_rating_sheet.csv, then:
+python src/human_eval_sheet.py score     # prints the means and writes results/human_eval_baseline_transformer.csv
+```
 
 ## Git Workflow (reminder)
 
